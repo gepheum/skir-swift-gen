@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:swift-gen}/e2e-test",
+      "name": "Debug e2e-test (e2e-test)",
+      "target": "e2e-test",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug e2e-test (e2e-test)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:swift-gen}/e2e-test",
+      "name": "Release e2e-test (e2e-test)",
+      "target": "e2e-test",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release e2e-test (e2e-test)"
+    }
+  ]
+}

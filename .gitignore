@@ -1,0 +1,21 @@
+.DS_Store
+.git
+.gradle
+.idea
+build
+dist
+node_modules
+skir-external
+skirout
+tsconfig.tsbuildinfo
+
+# Swift
+.build/
+.swiftpm/
+*.o
+*.d
+*.swp
+Package.resolved
+xcuserdata/
+*.xcodeproj
+DerivedData/
