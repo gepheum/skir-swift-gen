@@ -1,9 +1,4 @@
-import {
-  type Field,
-  Record,
-  type RecordLocation,
-  convertCase,
-} from "skir-internal";
+import { Record, convertCase } from "skir-internal";
 
 export function modulePathToCaselessEnumName(modulePath: string): string {
   return modulePath
@@ -18,22 +13,118 @@ export function modulePathToCaselessEnumName(modulePath: string): string {
 /** Returns the name of the Swift type for the given Skir record. */
 export function getTypeName(record: Record): string {
   const name = record.name.text;
-  return name === "Self" ? name.concat("_") : name;
+  return RESERVED_KEYWORDS.has(name) ? name.concat("_") : name;
 }
 
-// TODO: change
-export function structFieldToGetterName(field: Field | string): string {
-  const skirName = typeof field === "string" ? field : field.name.text;
-  const upperCamel = convertCase(skirName, "UpperCamel");
-  return skirName.startsWith("search_") ||
-    skirName === "string" ||
-    skirName === "to_builder"
-    ? upperCamel.concat("_")
-    : upperCamel;
+export function toStructFieldName(
+  skirName: string,
+  fieldRecursivity?: false | "soft" | "via-optional" | "hard",
+): string {
+  const upperName = convertCase(skirName, "lowerCamel");
+  if (fieldRecursivity === "hard") {
+    return `_${upperName}_Rec`;
+  } else if (RESERVED_KEYWORDS.has(upperName)) {
+    return upperName.concat("_");
+  } else {
+    return upperName;
+  }
 }
 
-// TODO: change
-/** Returns the name of the frozen Go struct for the given record. */
-export function getClassName(record: RecordLocation): string {
-  return record.recordAncestors.map((r) => r.name.text).join("_");
-}
+const RESERVED_KEYWORDS = new Set<string>([
+  // Keywords used in declarations.
+  "associatedtype",
+  "class",
+  "deinit",
+  "enum",
+  "extension",
+  "fileprivate",
+  "func",
+  "import",
+  "init",
+  "inout",
+  "internal",
+  "let",
+  "open",
+  "operator",
+  "private",
+  "protocol",
+  "public",
+  "rethrows",
+  "static",
+  "struct",
+  "subscript",
+  "typealias",
+  "var",
+
+  // Keywords used in statements.
+  "break",
+  "case",
+  "continue",
+  "default",
+  "defer",
+  "do",
+  "else",
+  "fallthrough",
+  "for",
+  "guard",
+  "if",
+  "in",
+  "repeat",
+  "return",
+  "switch",
+  "where",
+  "while",
+
+  // Keywords used in expressions and types.
+  "Any",
+  "as",
+  "catch",
+  "false",
+  "is",
+  "nil",
+  "Self",
+  "self",
+  "super",
+  "throw",
+  "throws",
+  "true",
+  "try",
+
+  // Contextual / special-purpose keywords that commonly conflict with identifiers.
+  "actor",
+  "any",
+  "associativity",
+  "async",
+  "await",
+  "borrowing",
+  "convenience",
+  "consuming",
+  "didSet",
+  "distributed",
+  "dynamic",
+  "final",
+  "get",
+  "indirect",
+  "infix",
+  "isolated",
+  "lazy",
+  "left",
+  "mutating",
+  "none",
+  "nonmutating",
+  "optional",
+  "override",
+  "package",
+  "postfix",
+  "precedence",
+  "prefix",
+  "Protocol",
+  "required",
+  "right",
+  "set",
+  "some",
+  "Type",
+  "unowned",
+  "weak",
+  "willSet",
+]);

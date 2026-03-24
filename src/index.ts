@@ -8,7 +8,11 @@ import {
   type RecordLocation,
 } from "skir-internal";
 import { z } from "zod";
-import { getTypeName, modulePathToCaselessEnumName } from "./naming.js";
+import {
+  getTypeName,
+  modulePathToCaselessEnumName,
+  toStructFieldName,
+} from "./naming.js";
 import { TypeSpeller } from "./type_speller.js";
 
 const Config = z.strictObject({});
@@ -59,6 +63,8 @@ class SwiftSourceFileGenerator {
       // To install the Skir client library, run:
       //   ...
 
+      import Foundation
+
       `,
     );
 
@@ -101,6 +107,15 @@ class SwiftSourceFileGenerator {
   private writeCodeForStruct(struct: Record): void {
     const typeName = getTypeName(struct);
     this.push(`public struct ${typeName} {\n`);
+    for (const field of struct.fields) {
+      const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+      const fieldType = this.typeSpeller.getSwiftType(
+        field.type!,
+        field.isRecursive,
+      );
+      const fieldDoc = commentify(docToCommentText(field.doc));
+      this.push(`${fieldDoc}public let ${fieldName}: ${fieldType}\n`);
+    }
     this.writeCodeForRecords(struct.nestedRecords);
     this.push("}\n\n");
   }
@@ -221,22 +236,7 @@ class SwiftSourceFileGenerator {
   private code = "";
 }
 
-interface KeyedArrayHelper {
-  /** Name of the generated Search method. */
-  readonly searchMethodName: string;
-  /** Item (Go) type. */
-  readonly itemType: string;
-  /** Go type of the internal map. */
-  readonly mapType: string;
-  /** Key (Go) type exposed to the user. */
-  readonly exposedKeyType: string;
-  /** Go expression for extracting a comparable key from an item (e). */
-  readonly itemToComparableExpr: string;
-  /** Go expression for extracting a comparable key from an exposed key (k). */
-  readonly exposedKeyToComparableExpr: string;
-}
-
-function toGoStringLiteral(input: string): string {
+function toSwiftStringLiteral(input: string): string {
   const escaped = input
     .replace(/\\/g, "\\\\") // Escape backslashes
     .replace(/"/g, '\\"') // Escape double quotes
@@ -274,7 +274,7 @@ function tryGetGoLiteral(constant: Constant): string | null {
       }
     }
     case "string":
-      return toGoStringLiteral(valueAsDenseJson as string);
+      return toSwiftStringLiteral(valueAsDenseJson as string);
   }
   return null;
 }

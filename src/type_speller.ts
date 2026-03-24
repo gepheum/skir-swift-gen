@@ -1,5 +1,5 @@
 import type { RecordKey, RecordLocation, ResolvedType } from "skir-internal";
-import { getClassName } from "./naming.js";
+import { modulePathToCaselessEnumName } from "./naming.js";
 
 /**
  * Transforms a type found in a `.skir` file into a Swift type.
@@ -7,47 +7,58 @@ import { getClassName } from "./naming.js";
 export class TypeSpeller {
   constructor(readonly recordMap: ReadonlyMap<RecordKey, RecordLocation>) {}
 
-  getSwiftType(type: ResolvedType): string {
+  getSwiftType(
+    type: ResolvedType,
+    fieldRecursivity?: false | "soft" | "via-optional" | "hard",
+  ): string {
     switch (type.kind) {
       case "record": {
         const recordLocation = this.recordMap.get(type.key)!;
-        const className = getClassName(recordLocation);
-        // const packageAlias = modulePathToAlias(recordLocation.modulePath);
-        // return `${packageAlias}.${className}`;
-        return className;
+        const caselessEnumName = modulePathToCaselessEnumName(
+          recordLocation.modulePath,
+        );
+        const qualifiedName = [
+          caselessEnumName,
+          ...recordLocation.recordAncestors.map((r) => r.name.text),
+        ].join(".");
+        return fieldRecursivity === "hard"
+          ? `SkirClient.Box<${qualifiedName}>?`
+          : qualifiedName;
       }
       case "array": {
         const itemType = this.getSwiftType(type.item);
-        return `skir_client.Array[${itemType}]`;
+        return `[${itemType}]`;
       }
       case "optional": {
         const otherType = this.getSwiftType(type.other);
-        return `skir_client.Optional[${otherType}]`;
+        return fieldRecursivity === "via-optional"
+          ? `SkirClient.Box<${otherType}>?`
+          : `${otherType}?`;
       }
       case "primitive": {
         const { primitive } = type;
         switch (primitive) {
           case "bool":
+            return "Bool";
           case "int32":
+            return "Int32";
           case "int64":
+            return "Int64";
           case "float32":
+            return "Float";
           case "float64":
+            return "Double";
           case "string":
-            return primitive;
+            return "String";
           case "hash64":
-            return "uint64";
+            return "UInt64";
           case "timestamp":
-            return "time.Time";
+            return "Foundation.Date";
           case "bytes":
-            return "skir_client.Bytes";
+            return "Foundation.Data";
         }
       }
     }
-  }
-
-  getClassName(recordKey: RecordKey): string {
-    const record = this.recordMap.get(recordKey)!;
-    return getClassName(record);
   }
 
   getSerializerExpression(type: ResolvedType): string {
@@ -105,10 +116,10 @@ export class TypeSpeller {
       }
       case "record": {
         const recordLocation = this.recordMap.get(type.key)!;
-        const className = getClassName(recordLocation);
+        // const className = getClassName(recordLocation);
         // const packageAlias = modulePathToAlias(recordLocation.modulePath);
         // return `${packageAlias}.${className}_serializer()`;
-        return className;
+        return "FOO";
       }
     }
   }
