@@ -1,4 +1,6 @@
 // Add the "Skir" enum containing unambiguous names...
+// hash() and hashValue seem to be generated properties on everything
+// Make the recursive getter not a getter but a generated property
 // Add serialziers
 // Add toString, equals
 // Add methods
@@ -17,7 +19,9 @@ import {
   ResolvedType,
 } from "skir-internal";
 import { z } from "zod";
+import { KeyedArrayContext } from "./keyed_array_context.js";
 import {
+  getQualifiedTypeName,
   getTypeName,
   getTypeRef,
   isValidVariantName,
@@ -56,6 +60,10 @@ class SwiftSourceFileGenerator {
     private readonly config: Config,
   ) {
     this.typeSpeller = new TypeSpeller(recordMap);
+    this.keyedArrayContext = new KeyedArrayContext(
+      skirModules,
+      this.typeSpeller,
+    );
   }
 
   generate(): string {
@@ -124,6 +132,7 @@ class SwiftSourceFileGenerator {
     const typeName = getTypeName(struct);
     // How to refer to this type from this type.
     const selfTypeRef = getTypeRef(structLocation, structLocation);
+    const qualifiedSelfType = getQualifiedTypeName(structLocation);
     this.push(`public struct ${typeName} {\n`);
     for (const field of struct.fields) {
       const fieldName = toStructFieldName(field.name.text, field.isRecursive);
@@ -139,7 +148,7 @@ class SwiftSourceFileGenerator {
             ? [
                 "Recursive field. Boxed and optional to avoid infinite size.",
                 "None should be treated the same as the default struct value.",
-                `Use \`${fieldName}()\` to read this field without having to handle the Option,`,
+                `Use \`${fieldName}\` to read this field without having to handle the Option,`,
                 "but be careful not to call it from a recursive function as it may cause",
                 "infinite recursion.",
               ]
@@ -166,7 +175,7 @@ class SwiftSourceFileGenerator {
     }
     this.push(");\n\n");
 
-    // Add getters for recursive fields.
+    // Add computed properties for recursive fields.
     for (const field of struct.fields) {
       if (field.isRecursive !== "hard") continue;
       const getterName = toStructFieldName(field.name.text);
@@ -177,8 +186,8 @@ class SwiftSourceFileGenerator {
         skirType,
         structLocation,
       );
-      this.push(`public func ${getterName}() -> ${returnType} {\n`);
-      this.push(`return switch self.${fieldName} {\n`);
+      this.push(`public var ${getterName}: ${returnType} {\n`);
+      this.push(`switch self.${fieldName} {\n`);
       this.push(`case .some(let rec): rec.value\n`);
       this.push(`case .none: ${defaultExpression}\n`);
       this.push("}\n");
@@ -236,6 +245,35 @@ class SwiftSourceFileGenerator {
     this.push(");\n");
     this.push("}\n\n");
 
+    const keySpecs =
+      this.keyedArrayContext.getKeySpecsForItemStruct(structLocation);
+    for (const keySpec of keySpecs) {
+      const keyAccess = keySpec.keyIsEnum
+        ? `String(describing: item.${keySpec.swiftKeyExpr})`
+        : `item.${keySpec.swiftKeyExpr}`;
+      this.push(
+        commentify([
+          `Spec for arrays of \`${typeName}\` items keyed by \`${keySpec.swiftKeyExpr}\`.`,
+        ]),
+        `public enum ${keySpec.specName}: SkirClient.KeyedArraySpec {\n`,
+        `public typealias Item = ${qualifiedSelfType}\n`,
+        `public typealias Key = ${keySpec.swiftKeyType}\n`,
+        "\n",
+        "public static func getKey(from item: Item) -> Key {\n",
+        `return ${keyAccess}\n`,
+        "}\n",
+        "\n",
+        "public static func keyExtractor() -> String {\n",
+        `return ${JSON.stringify(keySpec.keyExtractor)}\n`,
+        "}\n",
+        "\n",
+        "public static var defaultItem: Item {\n",
+        `return ${qualifiedSelfType}.defaultValue\n`,
+        "}\n",
+        "}\n\n",
+      );
+    }
+
     this.writeCodeForRecords(struct.nestedRecords);
     this.push("}\n\n");
   }
@@ -247,6 +285,12 @@ class SwiftSourceFileGenerator {
     // How to refer to this type from this type.
     const selfTypeRef = getTypeRef(recordLocation, recordLocation);
     this.push(`public enum ${typeName} {\n`);
+    this.push(
+      commentify([
+        "Use this case if you need to check if a value is unknown.",
+        "Use `unknownValue` if you just need an unknown value.",
+      ]),
+    );
     this.push(
       `case unknown(unrecognized: SkirClient.UnrecognizedVariant<${selfTypeRef}>);\n`,
     );
@@ -273,6 +317,12 @@ class SwiftSourceFileGenerator {
     this.push("public static let unknownValue = unknown(unrecognized: nil);\n");
     this.writeCodeForRecords(record.nestedRecords);
     this.push("}\n\n");
+  }
+
+  private pushSeparator(header: string): void {
+    this.push(`// ${"=".repeat(78)}\n`);
+    this.push(`// ${header}\n`);
+    this.push(`// ${"=".repeat(78)}\n\n`);
   }
 
   private push(...code: string[]): void {
@@ -381,6 +431,7 @@ class SwiftSourceFileGenerator {
   }
 
   private readonly typeSpeller: TypeSpeller;
+  private readonly keyedArrayContext: KeyedArrayContext;
   private code = "";
 }
 
@@ -430,7 +481,7 @@ function commentify(textOrLines: string | readonly string[]): string {
   }
   return text
     .split("\n")
-    .map((line) => (line.length > 0 ? `/// ${line}\n` : `///\n`))
+    .map((line) => (line.length > 0 ? `/// ${line}\n` : "///\n"))
     .join("");
 }
 

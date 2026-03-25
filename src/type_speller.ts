@@ -1,4 +1,5 @@
 import type { RecordKey, RecordLocation, ResolvedType } from "skir-internal";
+import { getSpecName, keyTypeIsSupported } from "./keyed_array_context.js";
 import { getTypeRef, ModuleContext } from "./naming.js";
 
 /**
@@ -9,7 +10,7 @@ export class TypeSpeller {
 
   getSwiftType(
     type: ResolvedType,
-    context: RecordLocation | ModuleContext,
+    context: RecordLocation | ModuleContext | null,
     fieldRecursivity?: false | "soft" | "via-optional" | "hard",
   ): string {
     switch (type.kind) {
@@ -22,7 +23,12 @@ export class TypeSpeller {
       }
       case "array": {
         const itemType = this.getSwiftType(type.item, context);
-        return `[${itemType}]`;
+        if (type.key && keyTypeIsSupported(type.key.keyType)) {
+          const specName = getSpecName(type.key);
+          return `SkirClient.KeyedArray<${itemType}.${specName}>`;
+        } else {
+          return `[${itemType}]`;
+        }
       }
       case "optional": {
         const otherType = this.getSwiftType(type.other, context);
@@ -61,23 +67,23 @@ export class TypeSpeller {
       case "primitive": {
         switch (type.primitive) {
           case "bool":
-            return "skir_client.BoolSerializer()";
+            return "SkirClient.Serializer.bool()";
           case "int32":
-            return "skir_client.Int32Serializer()";
+            return "SkirClient.Serializer.int32()";
           case "int64":
-            return "skir_client.Int64Serializer()";
+            return "SkirClient.Serializer.int64()";
           case "hash64":
-            return "skir_client.Hash64Serializer()";
+            return "SkirClient.Serializer.hash64()";
           case "float32":
-            return "skir_client.Float32Serializer()";
+            return "SkirClient.Serializer.float32()";
           case "float64":
-            return "skir_client.Float64Serializer()";
+            return "SkirClient.Serializer.float64()";
           case "timestamp":
-            return "skir_client.TimestampSerializer()";
+            return "SkirClient.Serializer.timestamp()";
           case "string":
-            return "skir_client.StringSerializer()";
+            return "SkirClient.Serializer.string()";
           case "bytes":
-            return "skir_client.BytesSerializer()";
+            return "SkirClient.Serializer.bytes()";
         }
         const _: never = type.primitive;
         throw TypeError();
@@ -88,33 +94,29 @@ export class TypeSpeller {
             .map((part) => part.name.text)
             .join(".");
           return (
-            "skir_client.Internal__ArraySerializer(\n" +
+            "SkirClient.Serializer.array(\n" +
             this.getSerializerExpression(type.item) +
-            ",\n" +
+            ", keyExtractor: " +
             JSON.stringify(keyExtractor) +
-            ",\n)"
+            "\n)"
           );
         } else {
           return (
-            "skir_client.ArraySerializer(\n" +
+            "SkirClient.Serializer.array(\n" +
             this.getSerializerExpression(type.item) +
-            ",\n)"
+            ', keyExtractor: ""\n)'
           );
         }
       }
       case "optional": {
         return (
-          "skir_client.OptionalSerializer(\n" +
+          "SkirClient.Serializer.optional(\n" +
           this.getSerializerExpression(type.other) +
-          ",\n)"
+          "\n)"
         );
       }
       case "record": {
-        const recordLocation = this.recordMap.get(type.key)!;
-        // const className = getClassName(recordLocation);
-        // const packageAlias = modulePathToAlias(recordLocation.modulePath);
-        // return `${packageAlias}.${className}_serializer()`;
-        return "FOO";
+        return "foo";
       }
     }
   }

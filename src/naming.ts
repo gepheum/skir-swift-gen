@@ -23,12 +23,12 @@ export type ModuleContext = {
 
 export function getTypeRef(
   record: RecordLocation,
-  context: RecordLocation | ModuleContext,
+  context: RecordLocation | ModuleContext | null,
 ): string {
-  const recordAncestors = record.recordAncestors;
-  const contextAncestors =
-    context.kind === "module" ? [] : context.recordAncestors;
-  if (record.modulePath === context.modulePath) {
+  if (record.modulePath === context?.modulePath) {
+    const recordAncestors = record.recordAncestors;
+    const contextAncestors =
+      context.kind === "module" ? [] : context.recordAncestors;
     // First, check if 'record' is nested within 'context'.
     // If so, we have a match.
     if (
@@ -65,7 +65,7 @@ export function getTypeRef(
   return getQualifiedTypeName(record);
 }
 
-function getQualifiedTypeName(record: RecordLocation): string {
+export function getQualifiedTypeName(record: RecordLocation): string {
   const caselessEnumName = modulePathToCaselessEnumName(record.modulePath);
   return [
     caselessEnumName,

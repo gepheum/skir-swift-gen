@@ -133,13 +133,13 @@ extension SkirClient {
         }
 
         /// Registers a constant variant.
-        public func addConstantVariant<V: Clone>(
+        public func addConstantVariant(
             name: String,
             number: Int32,
             kindOrdinal: Int,
             doc: String,
-            instance: V
-        ) where V == T {
+            instance: T
+        ) where T: Clone {
             lock.lock()
             defer { lock.unlock() }
             numberToEntry[number] = .constant(kindOrdinal)
