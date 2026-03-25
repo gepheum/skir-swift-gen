@@ -311,6 +311,7 @@ class SwiftSourceFileGenerator {
         this.push(`case ${variantName};\n`);
       }
     }
+    this.push("\n");
     if (this.keyedArrayContext.isEnumUsedAsKey(record)) {
       this.push("public enum _Kind: Hashable {\n");
       this.push("case unknown;\n");

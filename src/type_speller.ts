@@ -157,11 +157,8 @@ export class TypeSpeller {
         if (fieldRecursivity === "hard") {
           return "nil";
         } else {
-          const typeName = this.getSwiftType(type, context, fieldRecursivity);
           const { recordType } = this.recordMap.get(type.key)!.record;
-          return recordType === "struct"
-            ? `${typeName}.defaultValue`
-            : `${typeName}.unknownValue`;
+          return recordType === "struct" ? ".defaultValue" : ".unknownValue";
         }
       }
     }
