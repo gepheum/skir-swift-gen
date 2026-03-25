@@ -1,5 +1,5 @@
 import type { RecordKey, RecordLocation, ResolvedType } from "skir-internal";
-import { modulePathToCaselessEnumName } from "./naming.js";
+import { ModuleContext, modulePathToCaselessEnumName } from "./naming.js";
 
 /**
  * Transforms a type found in a `.skir` file into a Swift type.
@@ -9,6 +9,7 @@ export class TypeSpeller {
 
   getSwiftType(
     type: ResolvedType,
+    context: RecordLocation | ModuleContext,
     fieldRecursivity?: false | "soft" | "via-optional" | "hard",
   ): string {
     switch (type.kind) {
@@ -26,11 +27,11 @@ export class TypeSpeller {
           : qualifiedName;
       }
       case "array": {
-        const itemType = this.getSwiftType(type.item);
+        const itemType = this.getSwiftType(type.item, context);
         return `[${itemType}]`;
       }
       case "optional": {
-        const otherType = this.getSwiftType(type.other);
+        const otherType = this.getSwiftType(type.other, context);
         return fieldRecursivity === "via-optional"
           ? `SkirClient.Box<${otherType}>?`
           : `${otherType}?`;
@@ -120,6 +121,49 @@ export class TypeSpeller {
         // const packageAlias = modulePathToAlias(recordLocation.modulePath);
         // return `${packageAlias}.${className}_serializer()`;
         return "FOO";
+      }
+    }
+  }
+
+  getDefaultExpression(
+    type: ResolvedType,
+    context: RecordLocation | ModuleContext,
+    fieldRecursivity?: false | "soft" | "via-optional" | "hard",
+  ): string {
+    switch (type.kind) {
+      case "primitive": {
+        switch (type.primitive) {
+          case "bool":
+            return "false";
+          case "int32":
+          case "int64":
+          case "hash64":
+          case "float32":
+          case "float64":
+            return "0";
+          case "string":
+            return '""';
+          case "timestamp":
+            return "Foundation.Date(timeIntervalSince1970: 0)";
+          case "bytes":
+            return "Foundation.Data()";
+        }
+        const _: never = type.primitive;
+        throw TypeError();
+      }
+      case "array": {
+        return "[]";
+      }
+      case "optional": {
+        return "nil";
+      }
+      case "record": {
+        if (fieldRecursivity === "hard") {
+          return "nil";
+        } else {
+          const typeName = this.getSwiftType(type, context, fieldRecursivity);
+          return `${typeName}.defaultValue`;
+        }
       }
     }
   }

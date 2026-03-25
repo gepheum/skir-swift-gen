@@ -1,4 +1,4 @@
-import { Record, convertCase } from "skir-internal";
+import { Record, RecordLocation, convertCase } from "skir-internal";
 
 export function modulePathToCaselessEnumName(modulePath: string): string {
   return modulePath
@@ -16,14 +16,74 @@ export function getTypeName(record: Record): string {
   return RESERVED_KEYWORDS.has(name) ? name.concat("_") : name;
 }
 
+export type ModuleContext = {
+  readonly kind: "module";
+  readonly modulePath: string;
+};
+
+export function getTypeRef(
+  record: RecordLocation,
+  context: RecordLocation | ModuleContext,
+): string {
+  const recordAncestors = record.recordAncestors;
+  const contextAncestors =
+    context.kind === "module" ? [] : context.recordAncestors;
+  if (record.modulePath === context.modulePath) {
+    // First, check if 'record' is nested within 'context'.
+    // If so, we have a match.
+    if (
+      context.kind === "module" ||
+      recordAncestors.slice(0, -1).some((a) => a === context.record)
+    ) {
+      return recordAncestors
+        .slice(contextAncestors.length)
+        .map((r) => getTypeName(r))
+        .join(".");
+    }
+    // Then, climb back the ancestors of 'context' and look for a match with
+    // the most outer ancestor of 'record'.
+    const recordTopAncestor = recordAncestors[0]!;
+    let nameConflict = false;
+    for (const contextAncestor of [...contextAncestors].reverse()) {
+      if (contextAncestor.nameToDeclaration[recordTopAncestor.name.text]) {
+        // Name conflict: the context ancestor has a declaration with the same
+        // name as the most outer ancestor of the record. In this case, we can't
+        // use a concise reference.
+        nameConflict = true;
+        break;
+      }
+      if (contextAncestor.key === recordTopAncestor.key) {
+        break;
+      }
+    }
+    if (!nameConflict) {
+      // In the same module and no name conflict: we don't have to return the
+      // full-qualified name.
+      return recordAncestors.map((r) => getTypeName(r)).join(".");
+    }
+  }
+  return getQualifiedTypeName(record);
+}
+
+function getQualifiedTypeName(record: RecordLocation): string {
+  const caselessEnumName = modulePathToCaselessEnumName(record.modulePath);
+  return [
+    caselessEnumName,
+    ...record.recordAncestors.map((r) => getTypeName(r)),
+  ].join(".");
+}
+
 export function toStructFieldName(
   skirName: string,
   fieldRecursivity?: false | "soft" | "via-optional" | "hard",
 ): string {
   const upperName = convertCase(skirName, "lowerCamel");
   if (fieldRecursivity === "hard") {
-    return `_${upperName}_Rec`;
-  } else if (RESERVED_KEYWORDS.has(upperName)) {
+    return `_${upperName}_rec`;
+  } else if (
+    RESERVED_KEYWORDS.has(upperName) ||
+    GENERARATED_STRUCT_MEMBERS.has(upperName)
+  ) {
     return upperName.concat("_");
   } else {
     return upperName;
@@ -127,4 +187,12 @@ const RESERVED_KEYWORDS = new Set<string>([
   "unowned",
   "weak",
   "willSet",
+]);
+
+const GENERARATED_STRUCT_MEMBERS = new Set<string>([
+  "clone",
+  "default",
+  "default_ref",
+  "fmt",
+  "serializer",
 ]);

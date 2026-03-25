@@ -1,3 +1,14 @@
+// Add recursive getters
+// Add static default field
+// Add enums
+// Add methods
+// Add constants
+// Unrecognized fields
+// update(...)
+// partial(...)
+// Add type descriptors
+// Add serialziers
+
 import {
   type CodeGenerator,
   type Constant,
@@ -10,6 +21,7 @@ import {
 import { z } from "zod";
 import {
   getTypeName,
+  getTypeRef,
   modulePathToCaselessEnumName,
   toStructFieldName,
 } from "./naming.js";
@@ -105,17 +117,34 @@ class SwiftSourceFileGenerator {
   }
 
   private writeCodeForStruct(struct: Record): void {
+    const { typeSpeller } = this;
+    const recordLocation = typeSpeller.recordMap.get(struct.key)!;
     const typeName = getTypeName(struct);
     this.push(`public struct ${typeName} {\n`);
     for (const field of struct.fields) {
       const fieldName = toStructFieldName(field.name.text, field.isRecursive);
-      const fieldType = this.typeSpeller.getSwiftType(
+      const fieldType = typeSpeller.getSwiftType(
         field.type!,
+        recordLocation,
         field.isRecursive,
       );
       const fieldDoc = commentify(docToCommentText(field.doc));
       this.push(`${fieldDoc}public let ${fieldName}: ${fieldType}\n`);
     }
+    this.push("\n");
+    this.push(
+      `public static let defaultValue = ${getTypeRef(recordLocation, recordLocation)}(\n`,
+    );
+    for (const field of struct.fields) {
+      const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+      const defaultExpression = this.typeSpeller.getDefaultExpression(
+        field.type!,
+        recordLocation,
+        field.isRecursive,
+      );
+      this.push(`${fieldName}: ${defaultExpression},\n`);
+    }
+    this.push(");\n\n");
     this.writeCodeForRecords(struct.nestedRecords);
     this.push("}\n\n");
   }
@@ -123,6 +152,8 @@ class SwiftSourceFileGenerator {
   private writeCodeForEnum(record: Record): void {
     const typeName = getTypeName(record);
     this.push(`public enum ${typeName} {\n`);
+    this.push("case defaultValue;\n");
+    this.push("\n");
     this.writeCodeForRecords(record.nestedRecords);
     this.push("}\n\n");
   }
@@ -290,7 +321,7 @@ function commentify(textOrLines: string | readonly string[]): string {
   }
   return text
     .split("\n")
-    .map((line) => (line.length > 0 ? `// ${line}\n` : `//\n`))
+    .map((line) => (line.length > 0 ? `/// ${line}\n` : `///\n`))
     .join("");
 }
 
