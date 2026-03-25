@@ -52,7 +52,7 @@ export function getTypeRef(
         nameConflict = true;
         break;
       }
-      if (contextAncestor.key === recordTopAncestor.key) {
+      if (contextAncestor === recordTopAncestor) {
         break;
       }
     }

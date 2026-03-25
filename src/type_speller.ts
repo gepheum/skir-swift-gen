@@ -1,5 +1,5 @@
 import type { RecordKey, RecordLocation, ResolvedType } from "skir-internal";
-import { ModuleContext, modulePathToCaselessEnumName } from "./naming.js";
+import { getTypeRef, ModuleContext } from "./naming.js";
 
 /**
  * Transforms a type found in a `.skir` file into a Swift type.
@@ -15,16 +15,10 @@ export class TypeSpeller {
     switch (type.kind) {
       case "record": {
         const recordLocation = this.recordMap.get(type.key)!;
-        const caselessEnumName = modulePathToCaselessEnumName(
-          recordLocation.modulePath,
-        );
-        const qualifiedName = [
-          caselessEnumName,
-          ...recordLocation.recordAncestors.map((r) => r.name.text),
-        ].join(".");
+        const typeRef = getTypeRef(recordLocation, context);
         return fieldRecursivity === "hard"
-          ? `SkirClient.Box<${qualifiedName}>?`
-          : qualifiedName;
+          ? `SkirClient.Box<${typeRef}>?`
+          : typeRef;
       }
       case "array": {
         const itemType = this.getSwiftType(type.item, context);

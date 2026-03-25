@@ -133,7 +133,9 @@ class SwiftSourceFileGenerator {
     }
     this.push("\n");
     this.push(
-      `public static let defaultValue = ${getTypeRef(recordLocation, recordLocation)}(\n`,
+      "public static let defaultValue = ",
+      getTypeRef(recordLocation, recordLocation),
+      "(\n",
     );
     for (const field of struct.fields) {
       const fieldName = toStructFieldName(field.name.text, field.isRecursive);
