@@ -4,9 +4,6 @@
 // Add constants
 // Unrecognized fields
 // Add toString, equals
-// update(...)
-// partial(...)
-// Add type descriptors
 // Add serialziers
 
 import {
