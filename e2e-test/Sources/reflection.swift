@@ -1,6 +1,6 @@
 import Foundation
 
-enum Reflection {
+public enum Reflection {
 	enum ParseError: Error, CustomStringConvertible {
 		case message(String)
 
@@ -12,7 +12,7 @@ enum Reflection {
 		}
 	}
 
-	enum PrimitiveType: String, CaseIterable, CustomStringConvertible {
+	public enum PrimitiveType: String, CaseIterable, CustomStringConvertible {
 		case bool = "bool"
 		case int32 = "int32"
 		case int64 = "int64"
@@ -23,10 +23,10 @@ enum Reflection {
 		case string = "string"
 		case bytes = "bytes"
 
-		var description: String { rawValue }
+		public var description: String { rawValue }
 	}
 
-	indirect enum TypeDescriptor: CustomStringConvertible {
+	public indirect enum TypeDescriptor: CustomStringConvertible {
 		case primitive(PrimitiveType)
 		case optional(TypeDescriptor)
 		case array(ArrayDescriptor)
@@ -54,12 +54,12 @@ enum Reflection {
 			}
 		}
 
-		var description: String {
+		public var description: String {
 			return asJson()
 		}
 	}
 
-	final class ArrayDescriptor: CustomStringConvertible {
+	public final class ArrayDescriptor: CustomStringConvertible {
 		let itemType: TypeDescriptor
 		let keyExtractor: String
 
@@ -68,12 +68,12 @@ enum Reflection {
 			self.keyExtractor = keyExtractor
 		}
 
-		var description: String {
+		public var description: String {
 			return "ArrayDescriptor(item_type: \(itemType), key_extractor: \(keyExtractor))"
 		}
 	}
 
-	final class StructField: CustomStringConvertible {
+	public final class StructField: CustomStringConvertible {
 		let name: String
 		let number: Int32
 		let fieldType: TypeDescriptor
@@ -86,7 +86,7 @@ enum Reflection {
 			self.doc = doc
 		}
 
-		var description: String {
+		public var description: String {
 			return "StructField(name: \(name), number: \(number), doc: \(doc))"
 		}
 	}
@@ -175,7 +175,7 @@ enum Reflection {
 		}
 	}
 
-	final class StructDescriptor: CustomStringConvertible {
+	public final class StructDescriptor: CustomStringConvertible {
 		let name: String
 		let qualifiedName: String
 		let modulePath: String
@@ -259,12 +259,12 @@ enum Reflection {
 			return built
 		}
 
-		var description: String {
+		public var description: String {
 			return "StructDescriptor(\(recordId()))"
 		}
 	}
 
-	final class EnumDescriptor: CustomStringConvertible {
+	public final class EnumDescriptor: CustomStringConvertible {
 		let name: String
 		let qualifiedName: String
 		let modulePath: String
@@ -348,7 +348,7 @@ enum Reflection {
 			return built
 		}
 
-		var description: String {
+		public var description: String {
 			return "EnumDescriptor(\(recordId()))"
 		}
 	}

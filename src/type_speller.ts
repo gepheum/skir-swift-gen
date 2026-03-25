@@ -156,7 +156,10 @@ export class TypeSpeller {
           return "nil";
         } else {
           const typeName = this.getSwiftType(type, context, fieldRecursivity);
-          return `${typeName}.defaultValue`;
+          const { recordType } = this.recordMap.get(type.key)!.record;
+          return recordType === "struct"
+            ? `${typeName}.defaultValue`
+            : `${typeName}.unknownValue`;
         }
       }
     }

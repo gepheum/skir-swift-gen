@@ -23,8 +23,4 @@ enum MyFile_Foo_skir {
   }
 }
 
-struct Foo {
-
-}
-
 print("Hello, world!")

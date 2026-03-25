@@ -1,23 +1,27 @@
 // Add enums
+// Add comment on caseless enums
+// Add the "Skir" enum containing unambiguous names...
+// Add serialziers
+// Add toString, equals
 // Add methods
 // Add constants
-// Unrecognized fields
-// Add toString, equals
-// Add serialziers
 
 import {
   type CodeGenerator,
-  type Constant,
+  convertCase,
   type Doc,
+  Field,
   type Module,
   Record,
   type RecordKey,
   type RecordLocation,
+  ResolvedType,
 } from "skir-internal";
 import { z } from "zod";
 import {
   getTypeName,
   getTypeRef,
+  isValidVariantName,
   modulePathToCaselessEnumName,
   toStructFieldName,
 } from "./naming.js";
@@ -114,16 +118,16 @@ class SwiftSourceFileGenerator {
 
   private writeCodeForStruct(struct: Record): void {
     const { typeSpeller } = this;
-    const recordLocation = typeSpeller.recordMap.get(struct.key)!;
-    // How to refer to this type from this type.
-    const selfTypeRef = getTypeRef(recordLocation, recordLocation);
+    const structLocation = typeSpeller.recordMap.get(struct.key)!;
     const typeName = getTypeName(struct);
+    // How to refer to this type from this type.
+    const selfTypeRef = getTypeRef(structLocation, structLocation);
     this.push(`public struct ${typeName} {\n`);
     for (const field of struct.fields) {
       const fieldName = toStructFieldName(field.name.text, field.isRecursive);
       const fieldType = typeSpeller.getSwiftType(
         field.type!,
-        recordLocation,
+        structLocation,
         field.isRecursive,
       );
       this.push(
@@ -153,7 +157,7 @@ class SwiftSourceFileGenerator {
       const fieldName = toStructFieldName(field.name.text, field.isRecursive);
       const defaultExpression = typeSpeller.getDefaultExpression(
         field.type!,
-        recordLocation,
+        structLocation,
         field.isRecursive,
       );
       this.push(`${fieldName}: ${defaultExpression},\n`);
@@ -166,10 +170,10 @@ class SwiftSourceFileGenerator {
       const getterName = toStructFieldName(field.name.text);
       const fieldName = toStructFieldName(field.name.text, field.isRecursive);
       const skirType = field.type!;
-      const returnType = typeSpeller.getSwiftType(skirType, recordLocation);
+      const returnType = typeSpeller.getSwiftType(skirType, structLocation);
       const defaultExpression = typeSpeller.getDefaultExpression(
         skirType,
-        recordLocation,
+        structLocation,
       );
       this.push(`public func ${getterName}() -> ${returnType} {\n`);
       this.push(`return switch self.${fieldName} {\n`);
@@ -185,12 +189,12 @@ class SwiftSourceFileGenerator {
       const fieldName = toStructFieldName(field.name.text, field.isRecursive);
       const fieldType = typeSpeller.getSwiftType(
         field.type!,
-        recordLocation,
+        structLocation,
         field.isRecursive,
       );
       const defaultExpression = this.typeSpeller.getDefaultExpression(
         field.type!,
-        recordLocation,
+        structLocation,
         field.isRecursive,
       );
       this.push(`${fieldName}: ${fieldType} = ${defaultExpression},\n`);
@@ -209,7 +213,7 @@ class SwiftSourceFileGenerator {
       const fieldName = toStructFieldName(field.name.text, field.isRecursive);
       const fieldType = typeSpeller.getSwiftType(
         field.type!,
-        recordLocation,
+        structLocation,
         field.isRecursive,
       );
       this.push(`${fieldName}: SkirClient.KeepOrSet<${fieldType}> = .keep,\n`);
@@ -235,10 +239,36 @@ class SwiftSourceFileGenerator {
   }
 
   private writeCodeForEnum(record: Record): void {
+    const { typeSpeller } = this;
+    const recordLocation = typeSpeller.recordMap.get(record.key)!;
     const typeName = getTypeName(record);
+    // How to refer to this type from this type.
+    const selfTypeRef = getTypeRef(recordLocation, recordLocation);
     this.push(`public enum ${typeName} {\n`);
-    this.push("case defaultValue;\n");
-    this.push("\n");
+    this.push(
+      `case unknown(unrecognized: SkirClient.UnrecognizedVariant<${selfTypeRef}>);\n`,
+    );
+    const variants = record.fields;
+    const variantNamesNeedSuffix = doVariantNamesNeedSuffix(variants);
+    for (const variant of variants) {
+      const variantName = convertCase(variant.name.text, "lowerCamel").concat(
+        variantNamesNeedSuffix ? (variant.type ? "Wrapper" : "Const") : "",
+      );
+      this.push(commentify(docToCommentText(variant.doc)));
+      const variantType = variant.type;
+      if (variantType) {
+        const valueSwiftType = typeSpeller.getSwiftType(
+          variantType,
+          recordLocation,
+          variant.isRecursive || false,
+        );
+        const maybeIndirect = resolveMaybeIndirect(variantType);
+        this.push(`${maybeIndirect}case ${variantName}(${valueSwiftType});\n`);
+      } else {
+        this.push(`case ${variantName};\n`);
+      }
+    }
+    this.push("public static let unknownValue = unknown(unrecognized: nil);\n");
     this.writeCodeForRecords(record.nestedRecords);
     this.push("}\n\n");
   }
@@ -352,6 +382,31 @@ class SwiftSourceFileGenerator {
   private code = "";
 }
 
+function resolveMaybeIndirect(type: ResolvedType): "indirect " | "" {
+  switch (type.kind) {
+    case "array":
+      return "";
+    case "optional":
+      return resolveMaybeIndirect(type.other);
+    case "primitive":
+      return "";
+    case "record":
+      return "indirect ";
+  }
+}
+
+function doVariantNamesNeedSuffix(variants: readonly Field[]): boolean {
+  const seenNames = new Set<string>();
+  for (const variant of variants) {
+    const lowerCamelName = convertCase(variant.name.text, "lowerCamel");
+    if (seenNames.has(lowerCamelName) || !isValidVariantName(lowerCamelName)) {
+      return true;
+    }
+    seenNames.add(lowerCamelName);
+  }
+  return false;
+}
+
 function toSwiftStringLiteral(input: string): string {
   const escaped = input
     .replace(/\\/g, "\\\\") // Escape backslashes
@@ -360,39 +415,6 @@ function toSwiftStringLiteral(input: string): string {
     .replace(/\r/g, "\\r") // Escape carriage returns
     .replace(/\t/g, "\\t"); // Escape tabs
   return `"${escaped}"`;
-}
-
-function tryGetGoLiteral(constant: Constant): string | null {
-  const type = constant.type!;
-  if (type.kind !== "primitive") {
-    return null;
-  }
-  const valueAsDenseJson = constant.valueAsDenseJson!;
-  switch (type.primitive) {
-    case "bool":
-      return valueAsDenseJson ? "true" : "false";
-    case "int32":
-    case "int64":
-    case "hash64":
-    case "float32":
-    case "float64": {
-      const maybeQuoted = valueAsDenseJson.toString();
-      if (
-        maybeQuoted === "Infinity" ||
-        maybeQuoted === "-Infinity" ||
-        maybeQuoted === "NaN"
-      ) {
-        return null;
-      } else {
-        return maybeQuoted.startsWith('"') && maybeQuoted.endsWith('"')
-          ? maybeQuoted.slice(1, -1)
-          : maybeQuoted;
-      }
-    }
-    case "string":
-      return toSwiftStringLiteral(valueAsDenseJson as string);
-  }
-  return null;
 }
 
 function commentify(textOrLines: string | readonly string[]): string {

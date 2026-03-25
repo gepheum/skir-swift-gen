@@ -90,6 +90,13 @@ export function toStructFieldName(
   }
 }
 
+export function isValidVariantName(lowerCamelName: string): boolean {
+  return (
+    !RESERVED_KEYWORDS.has(lowerCamelName) &&
+    !GENERARATED_ENUM_MEMBERS.has(lowerCamelName)
+  );
+}
+
 const RESERVED_KEYWORDS = new Set<string>([
   // Keywords used in declarations.
   "associatedtype",
@@ -193,4 +200,7 @@ const GENERARATED_STRUCT_MEMBERS = new Set<string>([
   "copy",
   "defaultValue",
   "partial",
+  "serializer",
 ]);
+
+const GENERARATED_ENUM_MEMBERS = new Set<string>(["serializer"]);
