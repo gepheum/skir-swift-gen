@@ -15,7 +15,7 @@ import { TypeSpeller } from "./type_speller.js";
 export interface KeySpec {
   /** For example "By_Id". */
   readonly specName: string;
-  /** For example "Int32", "String". */
+  /** For example "Int32", "Enums_skir.Weekday._Kind". */
   readonly swiftKeyType: string;
   /** For example "subItem.weekday.kind". */
   readonly swiftKeyExpr: string;

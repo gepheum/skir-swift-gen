@@ -203,4 +203,9 @@ const GENERARATED_STRUCT_MEMBERS = new Set<string>([
   "serializer",
 ]);
 
-const GENERARATED_ENUM_MEMBERS = new Set<string>(["serializer"]);
+const GENERARATED_ENUM_MEMBERS = new Set<string>([
+  "kind",
+  "serializer",
+  "unknown",
+  "unknownValue",
+]);

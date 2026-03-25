@@ -1,6 +1,5 @@
 // Add the "Skir" enum containing unambiguous names...
 // hash() and hashValue seem to be generated properties on everything
-// Make the recursive getter not a getter but a generated property
 // Add serialziers
 // Add toString, equals
 // Add methods
@@ -248,19 +247,17 @@ class SwiftSourceFileGenerator {
     const keySpecs =
       this.keyedArrayContext.getKeySpecsForItemStruct(structLocation);
     for (const keySpec of keySpecs) {
-      const keyAccess = keySpec.keyIsEnum
-        ? `String(describing: item.${keySpec.swiftKeyExpr})`
-        : `item.${keySpec.swiftKeyExpr}`;
       this.push(
         commentify([
           `Spec for arrays of \`${typeName}\` items keyed by \`${keySpec.swiftKeyExpr}\`.`,
+          `Example: SkirClient.KeyedArray<${selfTypeRef}.${keySpec.specName}>`,
         ]),
         `public enum ${keySpec.specName}: SkirClient.KeyedArraySpec {\n`,
         `public typealias Item = ${qualifiedSelfType}\n`,
         `public typealias Key = ${keySpec.swiftKeyType}\n`,
         "\n",
         "public static func getKey(from item: Item) -> Key {\n",
-        `return ${keyAccess}\n`,
+        `return item.${keySpec.swiftKeyExpr}\n`,
         "}\n",
         "\n",
         "public static func keyExtractor() -> String {\n",
@@ -313,6 +310,35 @@ class SwiftSourceFileGenerator {
       } else {
         this.push(`case ${variantName};\n`);
       }
+    }
+    if (this.keyedArrayContext.isEnumUsedAsKey(record)) {
+      this.push("public enum _Kind: Hashable {\n");
+      this.push("case unknown;\n");
+      for (const variant of variants) {
+        const variantName = convertCase(variant.name.text, "lowerCamel").concat(
+          variantNamesNeedSuffix ? (variant.type ? "Wrapper" : "Const") : "",
+        );
+        this.push(`case ${variantName};\n`);
+      }
+      this.push("}\n\n");
+
+      this.push("public var kind: _Kind {\n");
+      this.push("switch self {\n");
+      this.push("case .unknown:\n");
+      this.push("return .unknown\n");
+      for (const variant of variants) {
+        const variantName = convertCase(variant.name.text, "lowerCamel").concat(
+          variantNamesNeedSuffix ? (variant.type ? "Wrapper" : "Const") : "",
+        );
+        if (variant.type) {
+          this.push(`case .${variantName}(_):\n`);
+        } else {
+          this.push(`case .${variantName}:\n`);
+        }
+        this.push(`return .${variantName}\n`);
+      }
+      this.push("}\n");
+      this.push("}\n\n");
     }
     this.push("public static let unknownValue = unknown(unrecognized: nil);\n");
     this.writeCodeForRecords(record.nestedRecords);
