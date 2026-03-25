@@ -9,11 +9,8 @@ public enum SkirClient {
         case set(T)
     }
 
-    public enum UnrecognizedFormat {
-        case unknown
-        case denseJson
-        case bytes
-    }
+    public typealias UnrecognizedFields<T> = Optional<Box<UnrecognizedFieldsData<T>>>
+    public typealias UnrecognizedVariant<T> = Optional<Box<UnrecognizedVariantData<T>>>
 
     public final class UnrecognizedFieldsData<T> {
         let format: UnrecognizedFormat
@@ -87,6 +84,9 @@ public enum SkirClient {
         }
     }
 
-    public typealias UnrecognizedFields<T> = Optional<Box<UnrecognizedFieldsData<T>>>
-    public typealias UnrecognizedVariant<T> = Optional<Box<UnrecognizedVariantData<T>>>
+    enum UnrecognizedFormat {
+        case unknown
+        case denseJson
+        case bytes
+    }
 }
