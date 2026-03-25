@@ -211,7 +211,7 @@ extension SkirClient {
         return bytes
     }
 
-    fileprivate static func readU8(_ input: inout [UInt8]) throws -> UInt8 {
+    internal static func readU8(_ input: inout [UInt8]) throws -> UInt8 {
         guard let byte = input.first else {
             throw schemaError("unexpected end of input")
         }
@@ -260,7 +260,7 @@ extension SkirClient {
         Double(bitPattern: try readU64(&input))
     }
 
-    fileprivate static func decodeNumberBody(_ wire: UInt8, input: inout [UInt8]) throws -> Int64 {
+    internal static func decodeNumberBody(_ wire: UInt8, input: inout [UInt8]) throws -> Int64 {
         switch wire {
         case 0 ... 231:
             return Int64(wire)
@@ -287,7 +287,7 @@ extension SkirClient {
         }
     }
 
-    fileprivate static func decodeNumber(_ input: inout [UInt8]) throws -> Int64 {
+    internal static func decodeNumber(_ input: inout [UInt8]) throws -> Int64 {
         try decodeNumberBody(readU8(&input), input: &input)
     }
 
@@ -329,7 +329,7 @@ extension SkirClient {
         }
     }
 
-    fileprivate static func encodeUInt32(_ value: UInt32, out: inout [UInt8]) {
+    internal static func encodeUInt32(_ value: UInt32, out: inout [UInt8]) {
         switch value {
         case 0 ... 231:
             out.append(UInt8(value))
@@ -356,7 +356,7 @@ extension SkirClient {
         iso8601Formatter.string(from: millisToSystemTime(millis))
     }
 
-    fileprivate static func writeJsonEscapedString(_ string: String, out: inout String) {
+    internal static func writeJsonEscapedString(_ string: String, out: inout String) {
         out.append("\"")
         for scalar in string.unicodeScalars {
             switch scalar.value {
@@ -420,7 +420,7 @@ extension SkirClient {
         return Foundation.Data(bytes)
     }
 
-    fileprivate static func skipValue(_ input: inout [UInt8]) throws {
+    internal static func skipValue(_ input: inout [UInt8]) throws {
         let wire = try readU8(&input)
         switch wire {
         case 0 ... 231, 242, 244, 246, 255:
