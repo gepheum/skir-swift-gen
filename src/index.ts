@@ -126,14 +126,27 @@ class SwiftSourceFileGenerator {
         recordLocation,
         field.isRecursive,
       );
-      const fieldDoc = commentify(docToCommentText(field.doc));
-      this.push(`${fieldDoc}public let ${fieldName}: ${fieldType}\n`);
+      this.push(
+        commentify([
+          docToCommentText(field.doc),
+          ...(field.isRecursive === "hard"
+            ? [
+                "Recursive field. Boxed and optional to avoid infinite size.",
+                "None should be treated the same as the default struct value.",
+                `Use \`${fieldName}()\` to read this field without having to handle the Option,`,
+                "but be careful not to call it from a recursive function as it may cause",
+                "infinite recursion.",
+              ]
+            : []),
+        ]),
+      );
+      this.push(`public let ${fieldName}: ${fieldType}\n`);
     }
     this.push("\n");
     this.push("public static let defaultValue = ", typeRef, "(\n");
     for (const field of struct.fields) {
       const fieldName = toStructFieldName(field.name.text, field.isRecursive);
-      const defaultExpression = this.typeSpeller.getDefaultExpression(
+      const defaultExpression = typeSpeller.getDefaultExpression(
         field.type!,
         recordLocation,
         field.isRecursive,
@@ -142,6 +155,26 @@ class SwiftSourceFileGenerator {
     }
     this.push(");\n\n");
 
+    // Add getters for recursive fields.
+    for (const field of struct.fields) {
+      if (field.isRecursive !== "hard") continue;
+      const getterName = toStructFieldName(field.name.text);
+      const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+      const skirType = field.type!;
+      const returnType = typeSpeller.getSwiftType(skirType, recordLocation);
+      const defaultExpression = typeSpeller.getDefaultExpression(
+        skirType,
+        recordLocation,
+      );
+      this.push(`public func ${getterName}() -> ${returnType} {\n`);
+      this.push(`return switch self.${fieldName} {\n`);
+      this.push(`case .some(let rec): rec.value\n`);
+      this.push(`case .none: ${defaultExpression}\n`);
+      this.push("}\n");
+      this.push("}\n\n");
+    }
+
+    // The partial() static factory method.
     this.push("public static func partial(\n");
     for (const field of struct.fields) {
       const fieldName = toStructFieldName(field.name.text, field.isRecursive);
