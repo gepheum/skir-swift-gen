@@ -1,5 +1,3 @@
-// Add enums
-// Add comment on caseless enums
 // Add the "Skir" enum containing unambiguous names...
 // Add serialziers
 // Add toString, equals
@@ -82,6 +80,9 @@ class SwiftSourceFileGenerator {
 
     for (const skirModule of this.skirModules) {
       const caselessEnumName = modulePathToCaselessEnumName(skirModule.path);
+      this.push(
+        commentify(`Caseless enum for Skir module '${skirModule.path}'`),
+      );
       this.push(`public enum ${caselessEnumName} {\n`);
       this.writeCodeForRecords(
         skirModule.declarations.filter((r) => r.kind === "record"),
