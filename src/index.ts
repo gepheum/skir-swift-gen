@@ -1,4 +1,3 @@
-// Add recursive getters
 // Add enums
 // Add methods
 // Add constants
@@ -116,7 +115,8 @@ class SwiftSourceFileGenerator {
   private writeCodeForStruct(struct: Record): void {
     const { typeSpeller } = this;
     const recordLocation = typeSpeller.recordMap.get(struct.key)!;
-    const typeRef = getTypeRef(recordLocation, recordLocation);
+    // How to refer to this type from this type.
+    const selfTypeRef = getTypeRef(recordLocation, recordLocation);
     const typeName = getTypeName(struct);
     this.push(`public struct ${typeName} {\n`);
     for (const field of struct.fields) {
@@ -142,8 +142,13 @@ class SwiftSourceFileGenerator {
       );
       this.push(`public let ${fieldName}: ${fieldType}\n`);
     }
+    this.push(
+      "public let _unrecognized: SkirClient.UnrecognizedFields<",
+      selfTypeRef,
+      "> = nil;\n",
+    );
     this.push("\n");
-    this.push("public static let defaultValue = ", typeRef, "(\n");
+    this.push("public static let defaultValue = ", selfTypeRef, "(\n");
     for (const field of struct.fields) {
       const fieldName = toStructFieldName(field.name.text, field.isRecursive);
       const defaultExpression = typeSpeller.getDefaultExpression(
@@ -190,8 +195,8 @@ class SwiftSourceFileGenerator {
       );
       this.push(`${fieldName}: ${fieldType} = ${defaultExpression},\n`);
     }
-    this.push(") -> ", typeRef, " {\n");
-    this.push("return ", typeRef, "(\n");
+    this.push(") -> ", selfTypeRef, " {\n");
+    this.push("return ", selfTypeRef, "(\n");
     for (const field of struct.fields) {
       const fieldName = toStructFieldName(field.name.text, field.isRecursive);
       this.push(`${fieldName}: ${fieldName},\n`);
@@ -209,8 +214,8 @@ class SwiftSourceFileGenerator {
       );
       this.push(`${fieldName}: SkirClient.KeepOrSet<${fieldType}> = .keep,\n`);
     }
-    this.push(") -> ", typeRef, " {\n");
-    this.push("return ", typeRef, "(\n");
+    this.push(") -> ", selfTypeRef, " {\n");
+    this.push("return ", selfTypeRef, "(\n");
     for (const field of struct.fields) {
       const fieldName = toStructFieldName(field.name.text, field.isRecursive);
       this.push(`${fieldName}: {\n`);
