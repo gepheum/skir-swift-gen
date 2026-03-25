@@ -190,9 +190,7 @@ const RESERVED_KEYWORDS = new Set<string>([
 ]);
 
 const GENERARATED_STRUCT_MEMBERS = new Set<string>([
-  "clone",
-  "default",
-  "default_ref",
-  "fmt",
-  "serializer",
+  "copy",
+  "defaultValue",
+  "partial",
 ]);

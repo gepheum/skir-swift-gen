@@ -3,4 +3,9 @@ public enum SkirClient {
         let value: T
         init(_ value: T) { self.value = value }
     }
+
+    public enum KeepOrSet<T> {
+        case keep
+        case set(T)
+    }
 }

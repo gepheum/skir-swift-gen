@@ -1,9 +1,9 @@
 // Add recursive getters
-// Add static default field
 // Add enums
 // Add methods
 // Add constants
 // Unrecognized fields
+// Add toString, equals
 // update(...)
 // partial(...)
 // Add type descriptors
@@ -119,6 +119,7 @@ class SwiftSourceFileGenerator {
   private writeCodeForStruct(struct: Record): void {
     const { typeSpeller } = this;
     const recordLocation = typeSpeller.recordMap.get(struct.key)!;
+    const typeRef = getTypeRef(recordLocation, recordLocation);
     const typeName = getTypeName(struct);
     this.push(`public struct ${typeName} {\n`);
     for (const field of struct.fields) {
@@ -132,11 +133,7 @@ class SwiftSourceFileGenerator {
       this.push(`${fieldDoc}public let ${fieldName}: ${fieldType}\n`);
     }
     this.push("\n");
-    this.push(
-      "public static let defaultValue = ",
-      getTypeRef(recordLocation, recordLocation),
-      "(\n",
-    );
+    this.push("public static let defaultValue = ", typeRef, "(\n");
     for (const field of struct.fields) {
       const fieldName = toStructFieldName(field.name.text, field.isRecursive);
       const defaultExpression = this.typeSpeller.getDefaultExpression(
@@ -147,6 +144,57 @@ class SwiftSourceFileGenerator {
       this.push(`${fieldName}: ${defaultExpression},\n`);
     }
     this.push(");\n\n");
+
+    this.push("public static func partial(\n");
+    for (const field of struct.fields) {
+      const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+      const fieldType = typeSpeller.getSwiftType(
+        field.type!,
+        recordLocation,
+        field.isRecursive,
+      );
+      const defaultExpression = this.typeSpeller.getDefaultExpression(
+        field.type!,
+        recordLocation,
+        field.isRecursive,
+      );
+      this.push(`${fieldName}: ${fieldType} = ${defaultExpression},\n`);
+    }
+    this.push(") -> ", typeRef, " {\n");
+    this.push("return ", typeRef, "(\n");
+    for (const field of struct.fields) {
+      const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+      this.push(`${fieldName}: ${fieldName},\n`);
+    }
+    this.push(");\n");
+    this.push("}\n\n");
+
+    this.push("public func copy(\n");
+    for (const field of struct.fields) {
+      const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+      const fieldType = typeSpeller.getSwiftType(
+        field.type!,
+        recordLocation,
+        field.isRecursive,
+      );
+      this.push(`${fieldName}: SkirClient.KeepOrSet<${fieldType}> = .keep,\n`);
+    }
+    this.push(") -> ", typeRef, " {\n");
+    this.push("return ", typeRef, "(\n");
+    for (const field of struct.fields) {
+      const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+      this.push(`${fieldName}: {\n`);
+      this.push(`switch ${fieldName} {\n`);
+      this.push("case .keep:\n");
+      this.push(`return self.${fieldName};\n`);
+      this.push("case let .set(value):\n");
+      this.push("return value;\n");
+      this.push("}\n");
+      this.push("}(),\n");
+    }
+    this.push(");\n");
+    this.push("}\n\n");
+
     this.writeCodeForRecords(struct.nestedRecords);
     this.push("}\n\n");
   }
