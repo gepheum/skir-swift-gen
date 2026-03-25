@@ -140,6 +140,26 @@ extension SkirClient {
             return adapter.typeDescriptor()
         }
 
+        func _isDefault(_ value: T) -> Bool {
+            adapter.isDefault(value)
+        }
+
+        func _toJson(_ value: T, eolIndent: String?, out: inout String) {
+            adapter.toJson(value, eolIndent: eolIndent, out: &out)
+        }
+
+        func _fromJson(_ json: Any, keepUnrecognizedValues: Bool) throws -> T {
+            try adapter.fromJson(json, keepUnrecognizedValues: keepUnrecognizedValues)
+        }
+
+        func _encode(_ value: T, out: inout [UInt8]) {
+            adapter.encode(value, out: &out)
+        }
+
+        func _decode(_ input: inout [UInt8], keepUnrecognizedValues: Bool) throws -> T {
+            try adapter.decode(&input, keepUnrecognizedValues: keepUnrecognizedValues)
+        }
+
         // MARK: - Internal Constructors
 
         /// Constructs a Serializer with a given adapter.

@@ -2,6 +2,7 @@
 // Add serialziers
 // Add toString, equals
 // Add methods
+// Add goldens
 // Add constants
 
 import {
