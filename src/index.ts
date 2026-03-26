@@ -1,6 +1,4 @@
 // Add the "Skir" enum containing unambiguous names ("All.swift")...
-// Make Box toString()
-// Why the "try decodeValue"
 // Githubisation: split, add CI
 
 import {

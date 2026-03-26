@@ -131,4 +131,53 @@ final class GeneratedEnumsTests: XCTestCase {
         )
         XCTAssertNotEqual(s1, s2)
     }
+
+    // MARK: - Switch
+
+    func testSwitchOnWeekday() {
+        func isWeekend(_ day: Enums_skir.Weekday) -> Bool {
+            switch day {
+            case .saturday, .sunday:
+                return true
+            case .monday, .tuesday, .wednesday, .thursday, .friday:
+                return false
+            case .unknown:
+                return false
+            }
+        }
+
+        XCTAssertTrue(isWeekend(.saturday))
+        XCTAssertTrue(isWeekend(.sunday))
+        XCTAssertFalse(isWeekend(.monday))
+        XCTAssertFalse(isWeekend(.friday))
+        XCTAssertFalse(isWeekend(.unknownValue))
+    }
+
+    func testSwitchOnWrapperEnum() {
+        func describe(_ v: Enums_skir.JsonValue) -> String {
+            switch v {
+            case .null:
+                return "null"
+            case .boolean(let b):
+                return "bool(\(b))"
+            case .number(let n):
+                return "number(\(n))"
+            case .string(let s):
+                return "string(\(s))"
+            case .array(let arr):
+                return "array(\(arr.count) items)"
+            case .object(let obj):
+                return "object(\(obj.count) pairs)"
+            case .unknown:
+                return "unknown"
+            }
+        }
+
+        XCTAssertEqual(describe(.null), "null")
+        XCTAssertEqual(describe(.boolean(true)), "bool(true)")
+        XCTAssertEqual(describe(.number(3.14)), "number(3.14)")
+        XCTAssertEqual(describe(.string("hi")), "string(hi)")
+        XCTAssertEqual(describe(.array([.null, .boolean(false)])), "array(2 items)")
+        XCTAssertEqual(describe(.unknownValue), "unknown")
+    }
 }
