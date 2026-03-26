@@ -1,5 +1,6 @@
 // Add the "Skir" enum containing unambiguous names ("All.swift")...
 // Make Box toString()
+// Why the "try decodeValue"
 // Githubisation: split, add CI
 
 import {
@@ -142,7 +143,7 @@ class SwiftModuleCodeGenerator {
           docToCommentText(field.doc),
           ...(field.isRecursive === "hard"
             ? [
-                "Recursive field. Boxed and optional to avoid infinite size.",
+                "Recursive field. Stored as IndirectOptional to avoid infinite size.",
                 "None should be treated the same as the default struct value.",
                 `Use \`${fieldName}\` to read this field without having to handle the Option,`,
                 "but be careful not to call it from a recursive function as it may cause",
@@ -186,7 +187,7 @@ class SwiftModuleCodeGenerator {
       );
       this.push(`public var ${getterName}: ${returnType} {\n`);
       this.push(`switch self.${fieldName} {\n`);
-      this.push(`case .some(let rec): rec.value\n`);
+      this.push(`case .some(let rec): rec\n`);
       this.push(`case .none: ${defaultExpression}\n`);
       this.push("}\n");
       this.push("}\n\n");
@@ -330,8 +331,8 @@ class SwiftModuleCodeGenerator {
       ",\n",
       "newInstance: { _Builder() },\n",
       "toFrozen: { mutable in mutable.build() },\n",
-      "getUnrecognized: { input in input._unrecognized?.value },\n",
-      "setUnrecognized: { input, unrecognized in input._unrecognized = unrecognized.map(SkirClient.Box.init) }\n",
+      "getUnrecognized: { input in input._unrecognized },\n",
+      "setUnrecognized: { input, unrecognized in input._unrecognized = unrecognized }\n",
       ");\n\n",
     );
 
@@ -509,12 +510,12 @@ class SwiftModuleCodeGenerator {
     this.push(
       "}\n",
       "},\n",
-      "wrapUnrecognized: { unrecognized in .unknown(unrecognized: SkirClient.Box(unrecognized)) },\n",
+      "wrapUnrecognized: { unrecognized in .unknown(unrecognized: .some(unrecognized)) },\n",
       "getUnrecognized: {\n",
       "input in\n",
       "switch input {\n",
       "case .unknown(let unrecognized):\n",
-      "return unrecognized?.value\n",
+      "return unrecognized\n",
     );
     if (variants.length > 0) {
       this.push("default:\n", "return nil\n");

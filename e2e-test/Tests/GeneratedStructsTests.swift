@@ -125,7 +125,7 @@ final class GeneratedStructsTests: XCTestCase {
 
     func testRecursiveStructOneNonNilNotEqualToDefault() {
         let deepA = Structs_skir.RecA.partial(bool: true)
-        let a = Structs_skir.RecA.partial(_a_rec: SkirClient.Box(deepA))
+        let a = Structs_skir.RecA.partial(_a_rec: .some(deepA))
         let b = Structs_skir.RecA.defaultValue  // _a_rec == nil → a == RecA.defaultValue
         // a.a.bool == true  ≠  b.a.bool == false
         XCTAssertNotEqual(a, b)
@@ -133,8 +133,8 @@ final class GeneratedStructsTests: XCTestCase {
 
     func testRecursiveStructSameNestedValueAreEqual() {
         let inner = Structs_skir.RecA.partial(bool: true)
-        let a = Structs_skir.RecA.partial(_a_rec: SkirClient.Box(inner))
-        let b = Structs_skir.RecA.partial(_a_rec: SkirClient.Box(inner))
+        let a = Structs_skir.RecA.partial(_a_rec: .some(inner))
+        let b = Structs_skir.RecA.partial(_a_rec: .some(inner))
         XCTAssertEqual(a, b)
     }
 }

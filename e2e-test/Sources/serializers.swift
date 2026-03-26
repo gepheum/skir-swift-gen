@@ -84,16 +84,16 @@ extension SkirClient {
     public enum Internal {
         public static func recursiveSerializer<Wrapped>(
             _ other: SkirClient.Serializer<Wrapped>
-        ) -> SkirClient.Serializer<SkirClient.Box<Wrapped>?> {
-            SkirClient.Serializer<SkirClient.Box<Wrapped>?>(
+        ) -> SkirClient.Serializer<SkirClient.IndirectOptional<Wrapped>> {
+            SkirClient.Serializer<SkirClient.IndirectOptional<Wrapped>>(
                 adapter: SkirClient.RecursiveAdapter(other: other)
             )
         }
 
         public static func optionBoxSerializer<Wrapped>(
             _ other: SkirClient.Serializer<Wrapped>
-        ) -> SkirClient.Serializer<SkirClient.Box<Wrapped>?> {
-            SkirClient.Serializer<SkirClient.Box<Wrapped>?>(
+        ) -> SkirClient.Serializer<SkirClient.IndirectOptional<Wrapped>> {
+            SkirClient.Serializer<SkirClient.IndirectOptional<Wrapped>>(
                 adapter: SkirClient.OptionBoxAdapter(other: other)
             )
         }
@@ -1076,49 +1076,49 @@ extension SkirClient {
     }
 
     struct RecursiveAdapter<Wrapped>: TypeAdapter {
-        typealias T = SkirClient.Box<Wrapped>?
+        typealias T = SkirClient.IndirectOptional<Wrapped>
 
         let other: SkirClient.Serializer<Wrapped>
 
-        func isDefault(_ input: SkirClient.Box<Wrapped>?) -> Bool {
-            guard let input else {
+        func isDefault(_ input: SkirClient.IndirectOptional<Wrapped>) -> Bool {
+            guard let inner = input.value else {
                 return true
             }
-            return other._isDefault(input.value)
+            return other._isDefault(inner)
         }
 
-        func toJson(_ input: SkirClient.Box<Wrapped>?, eolIndent: String?, out: inout String) {
-            guard let input else {
+        func toJson(_ input: SkirClient.IndirectOptional<Wrapped>, eolIndent: String?, out: inout String) {
+            guard let inner = input.value else {
                 out.append("[]")
                 return
             }
-            other._toJson(input.value, eolIndent: eolIndent, out: &out)
+            other._toJson(inner, eolIndent: eolIndent, out: &out)
         }
 
-        func fromJson(_ json: Any, keepUnrecognizedValues: Bool) throws -> SkirClient.Box<Wrapped>? {
+        func fromJson(_ json: Any, keepUnrecognizedValues: Bool) throws -> SkirClient.IndirectOptional<Wrapped> {
             if let values = json as? [Any], values.isEmpty {
-                return nil
+                return .none
             }
             if let number = jsonNumber(json), number.doubleValue == 0 {
-                return nil
+                return .none
             }
-            return SkirClient.Box(try other._fromJson(json, keepUnrecognizedValues: keepUnrecognizedValues))
+            return .some(try other._fromJson(json, keepUnrecognizedValues: keepUnrecognizedValues))
         }
 
-        func encode(_ input: SkirClient.Box<Wrapped>?, out: inout [UInt8]) {
-            guard let input else {
+        func encode(_ input: SkirClient.IndirectOptional<Wrapped>, out: inout [UInt8]) {
+            guard let inner = input.value else {
                 out.append(246)
                 return
             }
-            other._encode(input.value, out: &out)
+            other._encode(inner, out: &out)
         }
 
-        func decode(_ input: inout [UInt8], keepUnrecognizedValues: Bool) throws -> SkirClient.Box<Wrapped>? {
+        func decode(_ input: inout [UInt8], keepUnrecognizedValues: Bool) throws -> SkirClient.IndirectOptional<Wrapped> {
             if let first = input.first, first == 246 || first == 0 {
                 input.removeFirst()
-                return nil
+                return .none
             }
-            return SkirClient.Box(try other._decode(&input, keepUnrecognizedValues: keepUnrecognizedValues))
+            return .some(try other._decode(&input, keepUnrecognizedValues: keepUnrecognizedValues))
         }
 
         func typeDescriptor() -> Reflection.TypeDescriptor {
@@ -1127,41 +1127,44 @@ extension SkirClient {
     }
 
     struct OptionBoxAdapter<Wrapped>: TypeAdapter {
-        typealias T = SkirClient.Box<Wrapped>?
+        typealias T = SkirClient.IndirectOptional<Wrapped>
 
         let other: SkirClient.Serializer<Wrapped>
 
-        func isDefault(_ input: SkirClient.Box<Wrapped>?) -> Bool { input == nil }
+        func isDefault(_ input: SkirClient.IndirectOptional<Wrapped>) -> Bool {
+            if case .none = input { return true }
+            return false
+        }
 
-        func toJson(_ input: SkirClient.Box<Wrapped>?, eolIndent: String?, out: inout String) {
-            guard let input else {
+        func toJson(_ input: SkirClient.IndirectOptional<Wrapped>, eolIndent: String?, out: inout String) {
+            guard let inner = input.value else {
                 out.append("null")
                 return
             }
-            other._toJson(input.value, eolIndent: eolIndent, out: &out)
+            other._toJson(inner, eolIndent: eolIndent, out: &out)
         }
 
-        func fromJson(_ json: Any, keepUnrecognizedValues: Bool) throws -> SkirClient.Box<Wrapped>? {
+        func fromJson(_ json: Any, keepUnrecognizedValues: Bool) throws -> SkirClient.IndirectOptional<Wrapped> {
             if json is NSNull {
-                return nil
+                return .none
             }
-            return SkirClient.Box(try other._fromJson(json, keepUnrecognizedValues: keepUnrecognizedValues))
+            return .some(try other._fromJson(json, keepUnrecognizedValues: keepUnrecognizedValues))
         }
 
-        func encode(_ input: SkirClient.Box<Wrapped>?, out: inout [UInt8]) {
-            guard let input else {
+        func encode(_ input: SkirClient.IndirectOptional<Wrapped>, out: inout [UInt8]) {
+            guard let inner = input.value else {
                 out.append(255)
                 return
             }
-            other._encode(input.value, out: &out)
+            other._encode(inner, out: &out)
         }
 
-        func decode(_ input: inout [UInt8], keepUnrecognizedValues: Bool) throws -> SkirClient.Box<Wrapped>? {
+        func decode(_ input: inout [UInt8], keepUnrecognizedValues: Bool) throws -> SkirClient.IndirectOptional<Wrapped> {
             if input.first == 255 {
                 input.removeFirst()
-                return nil
+                return .none
             }
-            return SkirClient.Box(try other._decode(&input, keepUnrecognizedValues: keepUnrecognizedValues))
+            return .some(try other._decode(&input, keepUnrecognizedValues: keepUnrecognizedValues))
         }
 
         func typeDescriptor() -> Reflection.TypeDescriptor {

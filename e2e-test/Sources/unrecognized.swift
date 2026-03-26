@@ -1,6 +1,6 @@
 extension SkirClient {
-    public typealias UnrecognizedFields<T> = Optional<Box<UnrecognizedFieldsData<T>>>
-    public typealias UnrecognizedVariant<T> = Optional<Box<UnrecognizedVariantData<T>>>
+    public typealias UnrecognizedFields<T> = IndirectOptional<UnrecognizedFieldsData<T>>
+    public typealias UnrecognizedVariant<T> = IndirectOptional<UnrecognizedVariantData<T>>
 
     public final class UnrecognizedFieldsData<T> {
         let format: UnrecognizedFormat
@@ -18,23 +18,19 @@ extension SkirClient {
         }
 
         static func newFromJson(arrayLen: UInt32, jsonBytes: [UInt8]) -> UnrecognizedFields<T> {
-            return Box(
-                UnrecognizedFieldsData(
-                    format: .denseJson,
-                    arrayLen: arrayLen,
-                    values: jsonBytes
-                )
-            )
+            return .some(UnrecognizedFieldsData(
+                format: .denseJson,
+                arrayLen: arrayLen,
+                values: jsonBytes
+            ))
         }
 
         static func newFromBytes(arrayLen: UInt32, rawBytes: [UInt8]) -> UnrecognizedFields<T> {
-            return Box(
-                UnrecognizedFieldsData(
-                    format: .bytes,
-                    arrayLen: arrayLen,
-                    values: rawBytes
-                )
-            )
+            return .some(UnrecognizedFieldsData(
+                format: .bytes,
+                arrayLen: arrayLen,
+                values: rawBytes
+            ))
         }
     }
 
@@ -54,23 +50,19 @@ extension SkirClient {
         }
 
         static func newFromBytes(number: Int32, rawBytes: [UInt8]) -> UnrecognizedVariant<T> {
-            return Box(
-                UnrecognizedVariantData(
-                    format: .bytes,
-                    number: number,
-                    value: rawBytes
-                )
-            )
+            return .some(UnrecognizedVariantData(
+                format: .bytes,
+                number: number,
+                value: rawBytes
+            ))
         }
 
         static func newFromJson(number: Int32, jsonBytes: [UInt8]) -> UnrecognizedVariant<T> {
-            return Box(
-                UnrecognizedVariantData(
-                    format: .denseJson,
-                    number: number,
-                    value: jsonBytes
-                )
-            )
+            return .some(UnrecognizedVariantData(
+                format: .denseJson,
+                number: number,
+                value: jsonBytes
+            ))
         }
     }
 

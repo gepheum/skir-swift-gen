@@ -18,7 +18,7 @@ export class TypeSpeller {
         const recordLocation = this.recordMap.get(type.key)!;
         const typeRef = getTypeRef(recordLocation, context);
         return fieldRecursivity === "hard"
-          ? `SkirClient.Box<${typeRef}>?`
+          ? `SkirClient.IndirectOptional<${typeRef}>`
           : typeRef;
       }
       case "array": {
@@ -33,7 +33,7 @@ export class TypeSpeller {
       case "optional": {
         const otherType = this.getSwiftType(type.other, context);
         return fieldRecursivity === "via-optional"
-          ? `SkirClient.Box<${otherType}>?`
+          ? `SkirClient.IndirectOptional<${otherType}>`
           : `${otherType}?`;
       }
       case "primitive": {

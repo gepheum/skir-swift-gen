@@ -60,8 +60,8 @@ extension SkirClient {
 
         private let newInstance: () -> Mutable
         private let toFrozenFn: (Mutable) -> Frozen
-        private let getUnrecognized: (Frozen) -> UnrecognizedFieldsData<Frozen>?
-        private let setUnrecognized: (Mutable, UnrecognizedFieldsData<Frozen>?) -> Void
+        private let getUnrecognized: (Frozen) -> SkirClient.UnrecognizedFields<Frozen>
+        private let setUnrecognized: (Mutable, SkirClient.UnrecognizedFields<Frozen>) -> Void
         private var orderedEntries: [AnyFieldEntry<Frozen, Mutable>] = []
         private var nameToIndex: [String: Int] = [:]
         private var slotToIndex: [Int?] = []
@@ -77,8 +77,8 @@ extension SkirClient {
             doc: String,
             newInstance: @escaping () -> Mutable,
             toFrozen: @escaping (Mutable) -> Frozen,
-            getUnrecognized: @escaping (Frozen) -> UnrecognizedFieldsData<Frozen>?,
-            setUnrecognized: @escaping (Mutable, UnrecognizedFieldsData<Frozen>?) -> Void
+            getUnrecognized: @escaping (Frozen) -> SkirClient.UnrecognizedFields<Frozen>,
+            setUnrecognized: @escaping (Mutable, SkirClient.UnrecognizedFields<Frozen>) -> Void
         ) {
             self.newInstance = newInstance
             self.toFrozenFn = toFrozen
@@ -162,7 +162,7 @@ extension SkirClient {
         // MARK: - TypeAdapter Implementation
 
         public func isDefault(_ input: Frozen) -> Bool {
-            if getUnrecognized(input) != nil {
+            if case .some = getUnrecognized(input) {
                 return false
             }
             return orderedEntries.allSatisfy { $0.isFieldDefault(input) }
@@ -177,7 +177,7 @@ extension SkirClient {
         }
 
         private func toDenseJson(_ input: Frozen, out: inout String) {
-            let unrecognized = getUnrecognized(input)
+            let unrecognized = getUnrecognized(input).value
             let totalSlotCount: Int
             let extraJsonStr: String?
             if let u = unrecognized, u.format == .denseJson {
@@ -272,7 +272,7 @@ extension SkirClient {
                     let ud = SkirClient.UnrecognizedFieldsData<Frozen>(
                         format: .denseJson, arrayLen: UInt32(arr.count), values: Array(extraJson.utf8)
                     )
-                    setUnrecognized(target, ud)
+                    setUnrecognized(target, .some(ud))
                 }
             }
         }
@@ -286,7 +286,7 @@ extension SkirClient {
         }
 
         public func encode(_ input: Frozen, out: inout [UInt8]) {
-            let unrecognized = getUnrecognized(input)
+            let unrecognized = getUnrecognized(input).value
             let totalSlotCount: Int
             var extraBytes: [UInt8] = []
             if let u = unrecognized, u.format == .bytes {
@@ -363,7 +363,7 @@ extension SkirClient {
                 let ud = SkirClient.UnrecognizedFieldsData<Frozen>(
                     format: .bytes, arrayLen: UInt32(slotCount), values: extraBytes
                 )
-                setUnrecognized(t, ud)
+                setUnrecognized(t, .some(ud))
             } else if slotCount > recognizedCount {
                 for _ in recognizedCount ..< slotCount {
                     try SkirClient.skipValue(&input)
