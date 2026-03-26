@@ -1,7 +1,6 @@
 // Add the "Skir" enum containing unambiguous names ("All.swift")...
-// Add toString, equals
-// Add goldens
 // Githubisation: split, add CI
+// Make Box and KeyedArray representable (toString)
 
 import {
   type CodeGenerator,
@@ -128,7 +127,7 @@ class SwiftModuleCodeGenerator {
     // How to refer to this type from this type.
     const selfTypeRef = getTypeRef(structLocation, structLocation);
     const qualifiedSelfType = getQualifiedTypeName(structLocation);
-    this.push(`public struct ${typeName}: Swift.CustomStringConvertible {\n`);
+    this.push(`public struct ${typeName}: Swift.CustomStringConvertible, Swift.Equatable {\n`);
     for (const field of struct.fields) {
       const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
       const fieldType = typeSpeller.getSwiftType(
@@ -244,6 +243,25 @@ class SwiftModuleCodeGenerator {
     this.push(");\n");
     this.push("}\n\n");
 
+    this.push(
+      `public static func == (lhs: ${selfTypeRef}, rhs: ${selfTypeRef}) -> Bool {\n`,
+    );
+    for (const field of struct.fields) {
+      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
+      if (field.isRecursive === "hard") {
+        const getterName = getSwiftFieldName(field.name.text);
+        this.push(
+          `guard (lhs.${fieldName} == nil && rhs.${fieldName} == nil) || (lhs.${getterName} == rhs.${getterName}) else { return false }\n`,
+        );
+      } else {
+        this.push(
+          `guard lhs.${fieldName} == rhs.${fieldName} else { return false }\n`,
+        );
+      }
+    }
+    this.push("return true\n");
+    this.push("}\n\n");
+
     this.push("public var description: String {\n");
     this.push("Self.serializer.toJson(self, readable: true)\n");
     this.push("}\n\n");
@@ -352,7 +370,7 @@ class SwiftModuleCodeGenerator {
     const typeName = getTypeName(record);
     // How to refer to this type from this type.
     const selfTypeRef = getTypeRef(recordLocation, recordLocation);
-    this.push(`public enum ${typeName}: Swift.CustomStringConvertible {\n`);
+    this.push(`public enum ${typeName}: Swift.CustomStringConvertible, Swift.Equatable {\n`);
     this.push(
       commentify([
         "Use this case if you need to check if a value is unknown.",
@@ -419,6 +437,23 @@ class SwiftModuleCodeGenerator {
     this.push("public var description: String {\n");
     this.push("Self.serializer.toJson(self, readable: true)\n");
     this.push("}\n\n");
+
+    this.push(
+      `public static func == (lhs: ${selfTypeRef}, rhs: ${selfTypeRef}) -> Bool {\n`,
+      "switch (lhs, rhs) {\n",
+      "case (.unknown, .unknown): return true\n",
+    );
+    for (const variant of variants) {
+      const variantName = this.getVariantName(variant, variantNamesNeedSuffix);
+      if (variant.type) {
+        this.push(
+          `case (.${variantName}(let l), .${variantName}(let r)): return l == r\n`,
+        );
+      } else {
+        this.push(`case (.${variantName}, .${variantName}): return true\n`);
+      }
+    }
+    this.push("default: return false\n", "}\n", "}\n\n");
 
     this.push(
       "public static var serializer: SkirClient.Serializer<",

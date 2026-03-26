@@ -67,4 +67,68 @@ final class GeneratedEnumsTests: XCTestCase {
         }
         XCTAssertEqual(s, "hello")
     }
+
+    // MARK: - Equatable
+
+    func testSameConstantVariantAreEqual() {
+        XCTAssertEqual(Enums_skir.Weekday.monday, Enums_skir.Weekday.monday)
+    }
+
+    func testDifferentConstantVariantsAreNotEqual() {
+        XCTAssertNotEqual(Enums_skir.Weekday.monday, Enums_skir.Weekday.friday)
+    }
+
+    func testSameWrapperVariantWithSameValueAreEqual() {
+        XCTAssertEqual(Enums_skir.JsonValue.boolean(true), Enums_skir.JsonValue.boolean(true))
+    }
+
+    func testSameWrapperVariantWithDifferentValuesAreNotEqual() {
+        XCTAssertNotEqual(Enums_skir.JsonValue.boolean(true), Enums_skir.JsonValue.boolean(false))
+    }
+
+    func testDifferentVariantsAreNotEqual() {
+        XCTAssertNotEqual(Enums_skir.JsonValue.boolean(true), Enums_skir.JsonValue.number(1.0))
+    }
+
+    func testBothUnknownValueAreEqual() {
+        XCTAssertEqual(Enums_skir.Weekday.unknownValue, Enums_skir.Weekday.unknownValue)
+    }
+
+    func testUnknownValueNotEqualToKnownVariant() {
+        XCTAssertNotEqual(Enums_skir.Weekday.unknownValue, Enums_skir.Weekday.monday)
+    }
+
+    func testUnknownWithSameDataAreEqual() {
+        // Two values decoded from the same JSON produce equal unknown variants
+        let a = try! Enums_skir.Weekday.serializer.fromJson("999")
+        let b = try! Enums_skir.Weekday.serializer.fromJson("999")
+        XCTAssertEqual(a, b)
+    }
+
+    func testUnknownVariantsAreAlwaysEqual() {
+        // Unrecognized data is not compared — any two .unknown values are equal
+        let a = try! Enums_skir.Weekday.serializer.fromJson("999")
+        let b = try! Enums_skir.Weekday.serializer.fromJson("888")
+        XCTAssertEqual(a, b)
+    }
+
+    func testWrapperVariantWithNestedStructAreEqual() {
+        let s1 = Enums_skir.EnumWithStructField.s(
+            Enums_skir.EnumWithStructField.S.partial(x: 1.0, y: 2.0)
+        )
+        let s2 = Enums_skir.EnumWithStructField.s(
+            Enums_skir.EnumWithStructField.S.partial(x: 1.0, y: 2.0)
+        )
+        XCTAssertEqual(s1, s2)
+    }
+
+    func testWrapperVariantWithDifferentNestedStructAreNotEqual() {
+        let s1 = Enums_skir.EnumWithStructField.s(
+            Enums_skir.EnumWithStructField.S.partial(x: 1.0, y: 2.0)
+        )
+        let s2 = Enums_skir.EnumWithStructField.s(
+            Enums_skir.EnumWithStructField.S.partial(x: 9.0, y: 2.0)
+        )
+        XCTAssertNotEqual(s1, s2)
+    }
 }
