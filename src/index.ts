@@ -1,4 +1,5 @@
 // Add the "Skir" enum containing unambiguous names ("All.swift")...
+// Make Box toString()
 // Githubisation: split, add CI
 
 import {
@@ -126,7 +127,9 @@ class SwiftModuleCodeGenerator {
     // How to refer to this type from this type.
     const selfTypeRef = getTypeRef(structLocation, structLocation);
     const qualifiedSelfType = getQualifiedTypeName(structLocation);
-    this.push(`public struct ${typeName}: Swift.CustomStringConvertible, Swift.Equatable {\n`);
+    this.push(
+      `public struct ${typeName}: Swift.CustomStringConvertible, Swift.Equatable {\n`,
+    );
     for (const field of struct.fields) {
       const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
       const fieldType = typeSpeller.getSwiftType(
@@ -369,7 +372,9 @@ class SwiftModuleCodeGenerator {
     const typeName = getTypeName(record);
     // How to refer to this type from this type.
     const selfTypeRef = getTypeRef(recordLocation, recordLocation);
-    this.push(`public enum ${typeName}: Swift.CustomStringConvertible, Swift.Equatable {\n`);
+    this.push(
+      `public enum ${typeName}: Swift.CustomStringConvertible, Swift.Equatable {\n`,
+    );
     this.push(
       commentify([
         "Use this case if you need to check if a value is unknown.",
@@ -452,7 +457,10 @@ class SwiftModuleCodeGenerator {
         this.push(`case (.${variantName}, .${variantName}): return true\n`);
       }
     }
-    this.push("default: return false\n", "}\n", "}\n\n");
+    if (variants.length > 0) {
+      this.push("default: return false\n");
+    }
+    this.push("}\n", "}\n\n");
 
     this.push(
       "public static var serializer: SkirClient.Serializer<",

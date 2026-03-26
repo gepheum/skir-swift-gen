@@ -77,15 +77,7 @@ extension SkirClient {
         }
 
         func encodeValue(_ input: T, out: inout [UInt8]) {
-            let n = UInt32(bitPattern: variantNumber)
-            if n >= 1 && n <= 4 {
-                // Short wrapper form: single opcode byte 250+n.
-                out.append(UInt8(250 + n))
-            } else {
-                // Long wrapper form: 2-slot struct header + variant number.
-                out.append(248)
-                encodeUInt32(n, out: &out)
-            }
+            encodeUInt32(UInt32(bitPattern: variantNumber), out: &out)
             serializer._encode(getValue(input), out: &out)
         }
 
@@ -252,7 +244,7 @@ extension SkirClient {
                 out.append("\"UNKNOWN\"")
                 return
             }
-            if let u = getUnrecognized(input), !u.value.isEmpty, u.format == .denseJson {
+            if let u = getUnrecognized(input), !u.value.isEmpty {
                 out.append(String(decoding: u.value, as: UTF8.self))
             } else {
                 out.append("0")
@@ -289,8 +281,8 @@ extension SkirClient {
                 switch numberToEntry[num] {
                 case nil:
                     if keepUnrecognizedValues {
-                        let bytes = (try? JSONSerialization.data(withJSONObject: json, options: .fragmentsAllowed)).map { Array($0) } ?? []
-                        return wrapUnrecognized(UnrecognizedVariantData(format: .denseJson, number: num, value: bytes))
+                        let bytes = try JSONSerialization.data(withJSONObject: json)
+                        return wrapUnrecognized(UnrecognizedVariantData(number: num, value: Array(bytes)))
                     }
                     return defaultValue
                 case .removed:
@@ -324,8 +316,8 @@ extension SkirClient {
             switch numberToEntry[number] {
             case nil:
                 if keepUnrecognized {
-                    let bytes = (try? JSONSerialization.data(withJSONObject: rawJson, options: .fragmentsAllowed)).map { Array($0) } ?? []
-                    return wrapUnrecognized(UnrecognizedVariantData(format: .denseJson, number: number, value: bytes))
+                    let bytes = (try? JSONSerialization.data(withJSONObject: rawJson)).map { Array($0) } ?? []
+                    return wrapUnrecognized(UnrecognizedVariantData(number: number, value: bytes))
                 }
                 return defaultValue
             case .removed:
@@ -343,24 +335,7 @@ extension SkirClient {
         public func encode(_ input: T, out: inout [UInt8]) {
             let ko = getKindOrdinal(input)
             if ko == 0 {
-                if let u = getUnrecognized(input), u.format == .bytes {
-                    if u.value.isEmpty {
-                        // Constant-style unrecognized variant: re-emit the number.
-                        encodeUInt32(UInt32(bitPattern: u.number), out: &out)
-                    } else {
-                        // Wrapper-style unrecognized variant: use short or long form.
-                        let n = u.number
-                        if n >= 1 && n <= 4 {
-                            out.append(UInt8(250 + UInt8(n)))
-                        } else {
-                            out.append(248)
-                            encodeUInt32(UInt32(bitPattern: n), out: &out)
-                        }
-                        out.append(contentsOf: u.value)
-                    }
-                } else {
-                    encodeUInt32(0, out: &out)
-                }
+                encodeUInt32(0, out: &out)
                 return
             }
             if ko < kindOrdinalToEntry.count, let entry = kindOrdinalToEntry[ko] {
@@ -369,34 +344,17 @@ extension SkirClient {
         }
 
         public func decode(_ input: inout [UInt8], keepUnrecognizedValues: Bool) throws -> T {
-            let wire = try SkirClient.readU8(&input)
-            let num: Int32
-
-            if wire >= 251 && wire <= 254 {
-                // Short wrapper form: variant number is encoded in the opcode byte.
-                num = Int32(wire) - 250
-            } else if wire == 248 {
-                // Long wrapper form: 2-slot struct, slot 0 is the variant number.
-                let n = try SkirClient.decodeNumber(&input)
-                guard n >= Int32.min, n <= Int32.max else {
-                    throw DeserializeError.schema("variant number out of range")
-                }
-                num = Int32(n)
-            } else {
-                // Constant-variant or extended-number encoding.
-                let n = try SkirClient.decodeNumberBody(wire, input: &input)
-                guard n >= Int32.min, n <= Int32.max else {
-                    throw DeserializeError.schema("variant number out of range")
-                }
-                num = Int32(n)
+            let number = try decodeNumber(&input)
+            guard number >= Int32.min, number <= Int32.max else {
+                throw DeserializeError.schema("variant number out of range")
             }
-
+            let num = Int32(number)
             switch numberToEntry[num] {
             case nil:
                 if keepUnrecognizedValues {
                     let bytes = input
                     input.removeAll()
-                    return wrapUnrecognized(UnrecognizedVariantData(format: .bytes, number: num, value: bytes))
+                    return wrapUnrecognized(UnrecognizedVariantData(number: num, value: bytes))
                 }
                 return defaultValue
             case .removed:
