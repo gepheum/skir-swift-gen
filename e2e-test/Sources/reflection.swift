@@ -453,7 +453,7 @@ public enum Reflection {
 			("type", typeSignatureToValue(td)),
 			("records", .array(records)),
 		])
-		return root.prettyString() + "\n"
+		return root.prettyString()
 	}
 
 	private static func collectRecordValues(_ td: TypeDescriptor) -> [JsonValue] {

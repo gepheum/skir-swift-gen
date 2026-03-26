@@ -302,9 +302,9 @@ class SwiftModuleCodeGenerator {
       "modulePath: ",
       JSON.stringify(structLocation.modulePath),
       ",\n",
-      "qualifiedName: ",
-      JSON.stringify(getQualifiedTypeName(structLocation)),
-      ",\n",
+      'qualifiedName: "',
+      structLocation.recordAncestors.map((r) => r.name.text).join("."),
+      '",\n',
       "doc: ",
       JSON.stringify(docToCommentText(struct.doc)),
       ",\n",
@@ -442,9 +442,9 @@ class SwiftModuleCodeGenerator {
       "modulePath: ",
       JSON.stringify(recordLocation.modulePath),
       ",\n",
-      "qualifiedName: ",
-      JSON.stringify(getQualifiedTypeName(recordLocation)),
-      ",\n",
+      'qualifiedName: "',
+      recordLocation.recordAncestors.map((r) => r.name.text).join("."),
+      '",\n',
       "doc: ",
       JSON.stringify(docToCommentText(record.doc)),
       ",\n",
@@ -608,7 +608,6 @@ class SwiftModuleCodeGenerator {
     this.push(commentify(docToCommentText(constant.doc)));
 
     // Use LazyLock for lazy initialization from JSON.
-    const swiftType = typeSpeller.getSwiftType(type, this.currentModuleContext);
     const serializerExpr = typeSpeller.getSerializerExpression(type, null);
     const jsonLiteral = toSwiftStringLiteral(
       JSON.stringify(constant.valueAsDenseJson),

@@ -7,6 +7,8 @@ extension SkirClient {
         associatedtype Mutable
         func number() -> Int32
         func name() -> String
+        func doc() -> String
+        func fieldTypeDescriptor() -> Reflection.TypeDescriptor
         func isFieldDefault(_ input: Frozen) -> Bool
         func fieldToJson(_ input: Frozen, eolIndent: String?, out: inout String)
         func fieldFromJson(_ json: Any, target: Mutable, keepUnrecognized: Bool) throws
@@ -25,6 +27,8 @@ extension SkirClient {
 
         func number() -> Int32 { fieldNumber }
         func name() -> String { fieldName }
+        func doc() -> String { fieldDoc }
+        func fieldTypeDescriptor() -> Reflection.TypeDescriptor { serializer.typeDescriptor() }
 
         func isFieldDefault(_ input: Frozen) -> Bool {
             serializer._isDefault(getter(input))
@@ -127,7 +131,9 @@ extension SkirClient {
             for (index, entry) in orderedEntries.enumerated() {
                 nameToIndex[entry.name()] = index
             }
-            let maxNumber = orderedEntries.map { Int($0.number()) }.max() ?? -1
+            let maxFieldNumber = orderedEntries.map { Int($0.number()) }.max() ?? -1
+            let maxRemovedNumber = removedNumbers.isEmpty ? -1 : Int(removedNumbers.max()!)
+            let maxNumber = max(maxFieldNumber, maxRemovedNumber)
             slotToIndex = Array(repeating: nil, count: maxNumber + 1)
             for (index, entry) in orderedEntries.enumerated() {
                 slotToIndex[Int(entry.number())] = index
@@ -136,8 +142,8 @@ extension SkirClient {
                 Reflection.StructField(
                     name: entry.name(),
                     number: entry.number(),
-                    fieldType: .primitive(.string),
-                    doc: ""
+                    fieldType: entry.fieldTypeDescriptor(),
+                    doc: entry.doc()
                 )
             })
             desc.setRemovedNumbers(removedNumbers)
@@ -171,17 +177,29 @@ extension SkirClient {
         }
 
         private func toDenseJson(_ input: Frozen, out: inout String) {
+            let unrecognized = getUnrecognized(input)
+            let totalSlotCount: Int
+            let extraJsonStr: String?
+            if let u = unrecognized, u.format == .denseJson {
+                totalSlotCount = Int(u.arrayLen)
+                extraJsonStr = String(decoding: u.values, as: UTF8.self)
+            } else {
+                totalSlotCount = getSlotCount(input)
+                extraJsonStr = nil
+            }
+            let recognizedMax = slotToIndex.count
             out.append("[")
-            let slotCount = getSlotCount(input)
-            for i in 0 ..< slotCount {
-                if i > 0 {
-                    out.append(",")
-                }
-                if i < slotToIndex.count, let idx = slotToIndex[i] {
+            for i in 0 ..< min(totalSlotCount, recognizedMax) {
+                if i > 0 { out.append(",") }
+                if let idx = slotToIndex[i] {
                     orderedEntries[idx].fieldToJson(input, eolIndent: nil, out: &out)
                 } else {
                     out.append("0")
                 }
+            }
+            if totalSlotCount > recognizedMax, let extra = extraJsonStr, !extra.isEmpty {
+                if recognizedMax > 0 { out.append(",") }
+                out.append(extra)
             }
             out.append("]")
         }
@@ -236,6 +254,27 @@ extension SkirClient {
                 }
                 try entry.fieldFromJson(arr[n], target: target, keepUnrecognized: keepUnrecognized)
             }
+            if keepUnrecognized {
+                let recognizedMax = slotToIndex.count
+                if arr.count > recognizedMax {
+                    // Store extra elements beyond the schema as unrecognized data.
+                    var parts: [String] = []
+                    for i in recognizedMax ..< arr.count {
+                        let element = arr[i]
+                        if let data = try? JSONSerialization.data(withJSONObject: element, options: .fragmentsAllowed),
+                           let str = String(data: data, encoding: .utf8) {
+                            parts.append(str)
+                        } else {
+                            parts.append("0")
+                        }
+                    }
+                    let extraJson = parts.joined(separator: ",")
+                    let ud = SkirClient.UnrecognizedFieldsData<Frozen>(
+                        format: .denseJson, arrayLen: UInt32(arr.count), values: Array(extraJson.utf8)
+                    )
+                    setUnrecognized(target, ud)
+                }
+            }
         }
 
         private func fromReadableJson(_ obj: [String: Any], target: Mutable, keepUnrecognized: Bool) throws {
@@ -247,19 +286,45 @@ extension SkirClient {
         }
 
         public func encode(_ input: Frozen, out: inout [UInt8]) {
-            let slotCount = getSlotCount(input)
-            if slotCount <= 3 {
-                out.append(246 + UInt8(slotCount))
+            let unrecognized = getUnrecognized(input)
+            let totalSlotCount: Int
+            var extraBytes: [UInt8] = []
+            if let u = unrecognized, u.format == .bytes {
+                totalSlotCount = Int(u.arrayLen)
+                extraBytes = u.values
+            } else {
+                totalSlotCount = getSlotCount(input)
+            }
+            if totalSlotCount <= 3 {
+                out.append(246 + UInt8(totalSlotCount))
             } else {
                 out.append(250)
-                encodeUInt32(UInt32(slotCount), out: &out)
+                encodeUInt32(UInt32(totalSlotCount), out: &out)
             }
-            for i in 0 ..< slotCount {
-                if i < slotToIndex.count, let idx = slotToIndex[i] {
+            let recognizedCount = slotToIndex.count
+            for i in 0 ..< min(totalSlotCount, recognizedCount) {
+                if let idx = slotToIndex[i] {
                     orderedEntries[idx].encodeField(input, out: &out)
                 } else {
                     out.append(0)
                 }
+            }
+            out.append(contentsOf: extraBytes)
+        }
+
+        private func encodeExtraJsonElement(_ element: Any, out: inout [UInt8]) {
+            if let num = element as? NSNumber {
+                encodeInt32(num.int32Value, out: &out)
+            } else if let arr = element as? [Any] {
+                if arr.count <= 3 {
+                    out.append(246 + UInt8(arr.count))
+                } else {
+                    out.append(250)
+                    encodeUInt32(UInt32(arr.count), out: &out)
+                }
+                for item in arr { encodeExtraJsonElement(item, out: &out) }
+            } else {
+                out.append(0)
             }
         }
 
@@ -288,7 +353,18 @@ extension SkirClient {
                     try SkirClient.skipValue(&input)
                 }
             }
-            if slotCount > recognizedCount {
+            if keepUnrecognizedValues && slotCount > recognizedCount {
+                // Save the bytes of extra (unrecognized) slots.
+                let beforeExtra = input
+                for _ in recognizedCount ..< slotCount {
+                    try SkirClient.skipValue(&input)
+                }
+                let extraBytes = Array(beforeExtra.prefix(beforeExtra.count - input.count))
+                let ud = SkirClient.UnrecognizedFieldsData<Frozen>(
+                    format: .bytes, arrayLen: UInt32(slotCount), values: extraBytes
+                )
+                setUnrecognized(t, ud)
+            } else if slotCount > recognizedCount {
                 for _ in recognizedCount ..< slotCount {
                     try SkirClient.skipValue(&input)
                 }
@@ -309,6 +385,8 @@ extension SkirClient {
     fileprivate struct AnyFieldEntry<Frozen, Mutable> {
         private let _number: () -> Int32
         private let _name: () -> String
+        private let _doc: () -> String
+        private let _fieldTypeDescriptor: () -> Reflection.TypeDescriptor
         private let _isFieldDefault: (Frozen) -> Bool
         private let _fieldToJson: (Frozen, String?, inout String) -> Void
         private let _fieldFromJson: (Any, Mutable, Bool) throws -> Void
@@ -318,6 +396,8 @@ extension SkirClient {
         init<Entry: FieldEntry>(_ entry: Entry) where Entry.Frozen == Frozen, Entry.Mutable == Mutable {
             self._number = { entry.number() }
             self._name = { entry.name() }
+            self._doc = { entry.doc() }
+            self._fieldTypeDescriptor = { entry.fieldTypeDescriptor() }
             self._isFieldDefault = { entry.isFieldDefault($0) }
             self._fieldToJson = { entry.fieldToJson($0, eolIndent: $1, out: &$2) }
             self._fieldFromJson = { try entry.fieldFromJson($0, target: $1, keepUnrecognized: $2) }
@@ -327,6 +407,8 @@ extension SkirClient {
 
         func number() -> Int32 { _number() }
         func name() -> String { _name() }
+        func doc() -> String { _doc() }
+        func fieldTypeDescriptor() -> Reflection.TypeDescriptor { _fieldTypeDescriptor() }
         func isFieldDefault(_ input: Frozen) -> Bool { _isFieldDefault(input) }
         func fieldToJson(_ input: Frozen, eolIndent: String?, out: inout String) {
             _fieldToJson(input, eolIndent, &out)

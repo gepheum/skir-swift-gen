@@ -307,7 +307,7 @@ extension SkirClient {
         appendLittleEndian(value.bitPattern, to: &out)
     }
 
-    private static func encodeInt32(_ value: Int32, out: inout [UInt8]) {
+    internal static func encodeInt32(_ value: Int32, out: inout [UInt8]) {
         switch value {
         case Int32.min ... -65_537:
             out.append(237)
