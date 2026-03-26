@@ -1,5 +1,5 @@
 // Add the "Skir" enum containing unambiguous names...
-// Be consistent with the ";"
+// Make sure no name conflict with SkirClient, CustomStringConvertible...
 // hash() and hashValue seem to be generated properties on everything
 // Add toString, equals
 // Add methods
@@ -82,7 +82,7 @@ class SwiftModuleCodeGenerator {
       // Home: https://github.com/gepheum/skir-swift-gen
       //
       // To install the Skir client library, run:
-      //   ...
+      //   swift package add-dependency https://github.com/gepheum/skir-swift-client --branch main
 
       import Foundation
 
@@ -124,7 +124,7 @@ class SwiftModuleCodeGenerator {
     // How to refer to this type from this type.
     const selfTypeRef = getTypeRef(structLocation, structLocation);
     const qualifiedSelfType = getQualifiedTypeName(structLocation);
-    this.push(`public struct ${typeName} {\n`);
+    this.push(`public struct ${typeName}: CustomStringConvertible {\n`);
     for (const field of struct.fields) {
       const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
       const fieldType = typeSpeller.getSwiftType(
@@ -167,38 +167,6 @@ class SwiftModuleCodeGenerator {
     }
     this.push("_unrecognized: nil,\n");
     this.push(");\n\n");
-
-    this.push("final class _Builder {\n");
-    for (const field of struct.fields) {
-      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
-      const fieldType = typeSpeller.getSwiftType(
-        field.type!,
-        structLocation,
-        field.isRecursive,
-      );
-      const defaultExpression = typeSpeller.getDefaultExpression(
-        field.type!,
-        structLocation,
-        field.isRecursive,
-      );
-      this.push(`var ${fieldName}: ${fieldType} = ${defaultExpression}\n`);
-    }
-    this.push(
-      "var _unrecognized: SkirClient.UnrecognizedFields<",
-      selfTypeRef,
-      "> = nil\n",
-    );
-    this.push("\n");
-    this.push("func build() -> ", selfTypeRef, " {\n");
-    this.push("return ", selfTypeRef, "(\n");
-    for (const field of struct.fields) {
-      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
-      this.push(`${fieldName}: ${fieldName},\n`);
-    }
-    this.push("_unrecognized: _unrecognized,\n");
-    this.push(");\n");
-    this.push("}\n");
-    this.push("}\n\n");
 
     // Add computed properties for recursive fields.
     for (const field of struct.fields) {
@@ -272,6 +240,52 @@ class SwiftModuleCodeGenerator {
     this.push(");\n");
     this.push("}\n\n");
 
+    this.push("public var description: String {\n");
+    this.push("Self.serializer.toJson(self, readable: true)\n");
+    this.push("}\n\n");
+
+    this.push(
+      "public static var serializer: SkirClient.Serializer<",
+      selfTypeRef,
+      "> {\n",
+      "_ = ",
+      modulePathToCaselessEnumName(structLocation.modulePath),
+      "._initializeModuleSerializers\n",
+      "return SkirClient.Serializer(adapter: _typeAdapter)\n",
+      "}\n\n",
+      "final class _Builder {\n",
+    );
+    for (const field of struct.fields) {
+      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
+      const fieldType = typeSpeller.getSwiftType(
+        field.type!,
+        structLocation,
+        field.isRecursive,
+      );
+      const defaultExpression = typeSpeller.getDefaultExpression(
+        field.type!,
+        structLocation,
+        field.isRecursive,
+      );
+      this.push(`var ${fieldName}: ${fieldType} = ${defaultExpression}\n`);
+    }
+    this.push(
+      "var _unrecognized: SkirClient.UnrecognizedFields<",
+      selfTypeRef,
+      "> = nil\n",
+    );
+    this.push("\n");
+    this.push("func build() -> ", selfTypeRef, " {\n");
+    this.push("return ", selfTypeRef, "(\n");
+    for (const field of struct.fields) {
+      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
+      this.push(`${fieldName}: ${fieldName},\n`);
+    }
+    this.push("_unrecognized: _unrecognized,\n");
+    this.push(");\n");
+    this.push("}\n");
+    this.push("}\n\n");
+
     this.push(
       commentify([
         "Type adapter for this struct.",
@@ -295,14 +309,6 @@ class SwiftModuleCodeGenerator {
       "getUnrecognized: { input in input._unrecognized?.value },\n",
       "setUnrecognized: { input, unrecognized in input._unrecognized = unrecognized.map(SkirClient.Box.init) }\n",
       ");\n\n",
-      "public static var serializer: SkirClient.Serializer<",
-      selfTypeRef,
-      "> {\n",
-      "_ = ",
-      modulePathToCaselessEnumName(structLocation.modulePath),
-      "._initializeModuleSerializers\n",
-      "return SkirClient.Serializer(adapter: _typeAdapter)\n",
-      "}\n\n",
     );
 
     const keySpecs =
@@ -342,7 +348,7 @@ class SwiftModuleCodeGenerator {
     const typeName = getTypeName(record);
     // How to refer to this type from this type.
     const selfTypeRef = getTypeRef(recordLocation, recordLocation);
-    this.push(`public enum ${typeName} {\n`);
+    this.push(`public enum ${typeName}: CustomStringConvertible {\n`);
     this.push(
       commentify([
         "Use this case if you need to check if a value is unknown.",
@@ -406,6 +412,21 @@ class SwiftModuleCodeGenerator {
       "public static let unknownValue = unknown(unrecognized: nil);\n\n",
     );
 
+    this.push("public var description: String {\n");
+    this.push("Self.serializer.toJson(self, readable: true)\n");
+    this.push("}\n\n");
+
+    this.push(
+      "public static var serializer: SkirClient.Serializer<",
+      selfTypeRef,
+      "> {\n",
+      "_ = ",
+      modulePathToCaselessEnumName(recordLocation.modulePath),
+      "._initializeModuleSerializers\n",
+      "return SkirClient.Serializer(adapter: _typeAdapter)\n",
+      "}\n\n",
+    );
+
     this.push(
       commentify([
         "Type adapter for this enum.",
@@ -452,19 +473,7 @@ class SwiftModuleCodeGenerator {
     if (variants.length > 0) {
       this.push("default:\n", "return nil\n");
     }
-    this.push(
-      "}\n",
-      "}\n",
-      ");\n\n",
-      "public static var serializer: SkirClient.Serializer<",
-      selfTypeRef,
-      "> {\n",
-      "_ = ",
-      modulePathToCaselessEnumName(recordLocation.modulePath),
-      "._initializeModuleSerializers\n",
-      "return SkirClient.Serializer(adapter: _typeAdapter)\n",
-      "}\n\n",
-    );
+    this.push("}\n", "}\n", ");\n\n");
     this.writeCodeForRecords(record.nestedRecords);
     this.push("}\n\n");
   }

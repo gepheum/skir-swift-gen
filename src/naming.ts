@@ -206,11 +206,13 @@ const RESERVED_KEYWORDS = new Set<string>([
 const GENERARATED_STRUCT_MEMBERS = new Set<string>([
   "copy",
   "defaultValue",
+  "description",
   "partial",
   "serializer",
 ]);
 
 const GENERARATED_ENUM_MEMBERS = new Set<string>([
+  "description",
   "kind",
   "serializer",
   "unknown",
