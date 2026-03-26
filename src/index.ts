@@ -1,9 +1,7 @@
-// Add the "Skir" enum containing unambiguous names...
-// Make sure no name conflict with SkirClient, CustomStringConvertible...
-// hash() and hashValue seem to be generated properties on everything
+// Add the "Skir" enum containing unambiguous names ("All.swift")...
 // Add toString, equals
-// Add methods
 // Add goldens
+// Githubisation: split, add CI
 
 import {
   type CodeGenerator,
@@ -130,7 +128,7 @@ class SwiftModuleCodeGenerator {
     // How to refer to this type from this type.
     const selfTypeRef = getTypeRef(structLocation, structLocation);
     const qualifiedSelfType = getQualifiedTypeName(structLocation);
-    this.push(`public struct ${typeName}: CustomStringConvertible {\n`);
+    this.push(`public struct ${typeName}: Swift.CustomStringConvertible {\n`);
     for (const field of struct.fields) {
       const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
       const fieldType = typeSpeller.getSwiftType(
@@ -354,7 +352,7 @@ class SwiftModuleCodeGenerator {
     const typeName = getTypeName(record);
     // How to refer to this type from this type.
     const selfTypeRef = getTypeRef(recordLocation, recordLocation);
-    this.push(`public enum ${typeName}: CustomStringConvertible {\n`);
+    this.push(`public enum ${typeName}: Swift.CustomStringConvertible {\n`);
     this.push(
       commentify([
         "Use this case if you need to check if a value is unknown.",

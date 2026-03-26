@@ -19,13 +19,17 @@ export function modulePathToCaselessEnumName(modulePath: string): string {
 /** Returns the name of the Swift type for the given Skir record. */
 export function getTypeName(record: Record): string {
   const name = record.name.text;
-  return RESERVED_KEYWORDS.has(name) ? name.concat("_") : name;
+  return RESERVED_KEYWORDS.has(name) || SWIFT_MODULE_DEPS.has(name)
+    ? name.concat("_")
+    : name;
 }
 
 /** Returns the name of the Swift type for the given Skir method. */
 export function getSwiftMethodName(method: Method): string {
   const name = method.name.text;
-  return RESERVED_KEYWORDS.has(name) ? name.concat("_") : name;
+  return RESERVED_KEYWORDS.has(name) || SWIFT_MODULE_DEPS.has(name)
+    ? name.concat("_")
+    : name;
 }
 
 export type ModuleContext = {
@@ -213,6 +217,12 @@ const RESERVED_KEYWORDS = new Set<string>([
   "unowned",
   "weak",
   "willSet",
+]);
+
+const SWIFT_MODULE_DEPS = new Set<string>([
+  "Foundation",
+  "SkirClient",
+  "Swift",
 ]);
 
 const GENERARATED_STRUCT_MEMBERS = new Set<string>([
