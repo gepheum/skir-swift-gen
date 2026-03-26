@@ -62,63 +62,97 @@ export class TypeSpeller {
     }
   }
 
-  getSerializerExpression(type: ResolvedType): string {
+  getSerializerExpression(
+    type: ResolvedType,
+    context: RecordLocation | ModuleContext | null,
+    init?: "init",
+    fieldRecursivity?: false | "soft" | "via-optional" | "hard",
+  ): string {
+    let result: string;
     switch (type.kind) {
       case "primitive": {
         switch (type.primitive) {
           case "bool":
-            return "SkirClient.Serializer.bool()";
+            result = "SkirClient.Serializer.bool()";
+            break;
           case "int32":
-            return "SkirClient.Serializer.int32()";
+            result = "SkirClient.Serializer.int32()";
+            break;
           case "int64":
-            return "SkirClient.Serializer.int64()";
+            result = "SkirClient.Serializer.int64()";
+            break;
           case "hash64":
-            return "SkirClient.Serializer.hash64()";
+            result = "SkirClient.Serializer.hash64()";
+            break;
           case "float32":
-            return "SkirClient.Serializer.float32()";
+            result = "SkirClient.Serializer.float32()";
+            break;
           case "float64":
-            return "SkirClient.Serializer.float64()";
+            result = "SkirClient.Serializer.float64()";
+            break;
           case "timestamp":
-            return "SkirClient.Serializer.timestamp()";
+            result = "SkirClient.Serializer.timestamp()";
+            break;
           case "string":
-            return "SkirClient.Serializer.string()";
+            result = "SkirClient.Serializer.string()";
+            break;
           case "bytes":
-            return "SkirClient.Serializer.bytes()";
+            result = "SkirClient.Serializer.bytes()";
+            break;
+          default: {
+            const _: never = type.primitive;
+            throw TypeError();
+          }
         }
-        const _: never = type.primitive;
-        throw TypeError();
+        break;
       }
       case "array": {
-        if (type.key) {
-          const keyExtractor = type.key.path
-            .map((part) => part.name.text)
-            .join(".");
-          return (
-            "SkirClient.Serializer.array(\n" +
-            this.getSerializerExpression(type.item) +
-            ", keyExtractor: " +
-            JSON.stringify(keyExtractor) +
-            "\n)"
-          );
+        const itemSerializer = this.getSerializerExpression(
+          type.item,
+          context,
+          init,
+        );
+        const itemType = this.getSwiftType(type.item, context);
+        if (type.key && keyTypeIsSupported(type.key.keyType)) {
+          const arrayType = this.getSwiftType(type, context);
+          result =
+            `SkirClient.Serializer<${arrayType}>.keyedArray(\n` +
+            itemSerializer +
+            "\n)";
         } else {
-          return (
-            "SkirClient.Serializer.array(\n" +
-            this.getSerializerExpression(type.item) +
-            ', keyExtractor: ""\n)'
-          );
+          result =
+            `SkirClient.Serializer<[${itemType}]>.array(\n` +
+            itemSerializer +
+            ', keyExtractor: ""\n)';
         }
+        break;
       }
       case "optional": {
-        return (
-          "SkirClient.Serializer.optional(\n" +
-          this.getSerializerExpression(type.other) +
-          "\n)"
-        );
+        const otherType = this.getSwiftType(type.other, context);
+        result =
+          `SkirClient.Serializer<${otherType}?>.optional(\n` +
+          this.getSerializerExpression(type.other, context, init) +
+          "\n)";
+        break;
       }
       case "record": {
-        return "foo";
+        const typeRef = getTypeRef(this.recordMap.get(type.key)!, context);
+        if (init) {
+          result = `SkirClient.Serializer(adapter: ${typeRef}._adapterForInit())`;
+        } else {
+          result = `${typeRef}.serializer()`;
+        }
+        break;
       }
     }
+
+    if (fieldRecursivity === "hard") {
+      return `SkirClient.Internal.recursiveSerializer(\n${result}\n)`;
+    }
+    if (fieldRecursivity === "via-optional") {
+      return `SkirClient.Internal.optionBoxSerializer(\n${result}\n)`;
+    }
+    return result;
   }
 
   getDefaultExpression(
