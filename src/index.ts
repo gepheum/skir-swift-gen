@@ -372,9 +372,7 @@ class SwiftSourceFileGenerator {
     const typeName = getTypeName(record);
     // How to refer to this type from this type.
     const selfTypeRef = getTypeRef(recordLocation, recordLocation);
-    this.push(
-      `public enum ${typeName} {\n`,
-    );
+    this.push(`public enum ${typeName} {\n`);
     this.push(
       commentify([
         "Use this case if you need to check if a value is unknown.",
@@ -531,9 +529,7 @@ class SwiftSourceFileGenerator {
         this.push(");\n");
       }
       for (const number of record.removedNumbers) {
-        this.push(
-          `${typeRef}._typeAdapter.addRemovedNumber(${number});\n`,
-        );
+        this.push(`${typeRef}._typeAdapter.addRemovedNumber(${number});\n`);
       }
       this.push(`${typeRef}._typeAdapter.finalize();\n\n`);
       return;
