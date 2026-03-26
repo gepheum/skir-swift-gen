@@ -1,4 +1,5 @@
 // Add the "Skir" enum containing unambiguous names...
+// Be consistent with the ";"
 // hash() and hashValue seem to be generated properties on everything
 // Add serialziers
 // Split back into multiple files...
@@ -168,7 +169,7 @@ class SwiftSourceFileGenerator {
     this.push(
       "private let _unrecognized: SkirClient.UnrecognizedFields<",
       selfTypeRef,
-      ">\n"
+      ">\n",
     );
     this.push("\n");
 
@@ -378,7 +379,7 @@ class SwiftSourceFileGenerator {
     // How to refer to this type from this type.
     const selfTypeRef = getTypeRef(recordLocation, recordLocation);
     this.push(
-      `public enum ${typeName}: SkirClient.DefaultConstructible, SkirClient.Clone {\n`,
+      `public enum ${typeName} {\n`,
     );
     this.push(
       commentify([
@@ -439,13 +440,9 @@ class SwiftSourceFileGenerator {
       this.push("}\n");
       this.push("}\n\n");
     }
-    this.push("public static let unknownValue = unknown(unrecognized: nil);\n\n");
-    this.push("public init() {\n");
-    this.push("self = .unknownValue\n");
-    this.push("}\n\n");
-    this.push("public func cloned() -> Self {\n");
-    this.push("self\n");
-    this.push("}\n\n");
+    this.push(
+      "public static let unknownValue = unknown(unrecognized: nil);\n\n",
+    );
 
     this.push(
       commentify([
@@ -464,18 +461,19 @@ class SwiftSourceFileGenerator {
       "doc: ",
       JSON.stringify(docToCommentText(record.doc)),
       ",\n",
-      "getKindOrdinal: { input in\n",
+      "defaultValue: unknownValue,\n",
+      "getKindOrdinal: {\n",
+      "input in\n",
       "switch input {\n",
-      "case .unknown:\n",
-      "return 0\n",
+      "case .unknown: return 0\n",
     );
     for (let i = 0; i < variants.length; i++) {
       const variant = variants[i]!;
       const variantName = this.getVariantName(variant, variantNamesNeedSuffix);
       if (variant.type) {
-        this.push(`case .${variantName}(_):\n`);
+        this.push(`case .${variantName}(_): `);
       } else {
-        this.push(`case .${variantName}:\n`);
+        this.push(`case .${variantName}: `);
       }
       this.push(`return ${i + 1}\n`);
     }
@@ -483,7 +481,8 @@ class SwiftSourceFileGenerator {
       "}\n",
       "},\n",
       "wrapUnrecognized: { unrecognized in .unknown(unrecognized: SkirClient.Box(unrecognized)) },\n",
-      "getUnrecognized: { input in\n",
+      "getUnrecognized: {\n",
+      "input in\n",
       "switch input {\n",
       "case .unknown(let unrecognized):\n",
       "return unrecognized?.value\n",

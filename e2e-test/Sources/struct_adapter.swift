@@ -342,8 +342,4 @@ extension SkirClient {
         }
     }
 
-    /// Protocol for types that can be default-constructed.
-    public protocol DefaultConstructible {
-        init()
-    }
 }
