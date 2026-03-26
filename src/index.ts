@@ -273,11 +273,6 @@ class SwiftSourceFileGenerator {
       );
       this.push(`${fieldName}: SkirClient.KeepOrSet<${fieldType}> = .keep,\n`);
     }
-    this.push(
-      "_unrecognized: SkirClient.KeepOrSet<SkirClient.UnrecognizedFields<",
-      selfTypeRef,
-      ">> = .keep,\n",
-    );
     this.push(") -> ", selfTypeRef, " {\n");
     this.push("return ", selfTypeRef, "(\n");
     for (const field of struct.fields) {
@@ -291,14 +286,7 @@ class SwiftSourceFileGenerator {
       this.push("}\n");
       this.push("}(),\n");
     }
-    this.push("_unrecognized: {\n");
-    this.push("switch _unrecognized {\n");
-    this.push("case .keep:\n");
-    this.push("return self._unrecognized;\n");
-    this.push("case let .set(value):\n");
-    this.push("return value;\n");
-    this.push("}\n");
-    this.push("}(),\n");
+    this.push("_unrecognized: _unrecognized,\n");
     this.push(");\n");
     this.push("}\n\n");
 
