@@ -9,6 +9,7 @@ import {
   type CodeGenerator,
   type Constant,
   convertCase,
+  type Declaration,
   type Doc,
   type Field,
   type Module,
@@ -703,6 +704,29 @@ class SwiftModuleCodeGenerator {
 
   private readonly currentModuleContext: ModuleContext;
   private code = "";
+}
+
+function findUnambiguousNamesAcrossModules(modules: readonly Module[]): readonly Declaration[] {
+  const nameToDecls = new Map<string, Declaration[]>();
+  for (const module of modules) {
+    for (const decl of module.declarations) {
+      if (decl.kind === "import" || decl.kind === "import-alias") continue;
+      const name = decl.name.text;
+      const declsWithSameName = nameToDecls.get(name);
+      if (declsWithSameName) {
+        declsWithSameName.push(decl);
+      } else {
+        nameToDecls.set(name, [decl]);
+      }
+    }
+  }
+  const result: Declaration[] = [];
+  for (const declsWithSameName of nameToDecls.values()) {
+    if (declsWithSameName.length === 1) {
+      result.push(declsWithSameName[0]!);
+    }
+  }
+  return result;
 }
 
 function flattenRecords(records: readonly Record[]): Record[] {

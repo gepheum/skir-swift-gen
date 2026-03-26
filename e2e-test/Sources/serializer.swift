@@ -56,7 +56,7 @@ extension SkirClient {
             }
             let jsonValue: Any
             do {
-                jsonValue = try JSONSerialization.jsonObject(with: data)
+                jsonValue = try JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)
             } catch {
                 throw DeserializeError.invalidJson(error.localizedDescription)
             }

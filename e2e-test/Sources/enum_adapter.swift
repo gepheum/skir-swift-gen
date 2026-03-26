@@ -77,6 +77,7 @@ extension SkirClient {
         }
 
         func encodeValue(_ input: T, out: inout [UInt8]) {
+            encodeUInt32(UInt32(bitPattern: variantNumber), out: &out)
             serializer._encode(getValue(input), out: &out)
         }
 
