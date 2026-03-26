@@ -70,6 +70,14 @@ extension SkirClient {
     }
 }
 
+// MARK: - CustomStringConvertible
+
+extension SkirClient.KeyedArray: CustomStringConvertible {
+    public var description: String {
+        _items.description
+    }
+}
+
 // MARK: - RandomAccessCollection
 
 extension SkirClient.KeyedArray: RandomAccessCollection {

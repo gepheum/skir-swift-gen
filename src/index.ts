@@ -1,6 +1,5 @@
 // Add the "Skir" enum containing unambiguous names ("All.swift")...
 // Githubisation: split, add CI
-// Make Box and KeyedArray representable (toString)
 
 import {
   type CodeGenerator,
