@@ -13,7 +13,6 @@ import {
   type Field,
   type Module,
   type Record,
-  type RecordLocation,
   type ResolvedType,
 } from "skir-internal";
 import { z } from "zod";
@@ -41,10 +40,7 @@ class SwiftCodeGenerator implements CodeGenerator<Config> {
   generateCode(input: CodeGenerator.Input<Config>): CodeGenerator.Output {
     const { recordMap, config } = input;
     const typeSpeller = new TypeSpeller(recordMap);
-    const keyedArrayContext = new KeyedArrayContext(
-      input.modules,
-      typeSpeller,
-    );
+    const keyedArrayContext = new KeyedArrayContext(input.modules, typeSpeller);
     const outputFiles: CodeGenerator.OutputFile[] = [];
     for (const skirModule of input.modules) {
       outputFiles.push({
@@ -678,6 +674,8 @@ class SwiftModuleCodeGenerator {
 
     return (
       result
+        // Swift does not require trailing semicolons in these generated lines.
+        .replace(/;(?=\n)/g, "")
         // Remove spaces enclosed within curly brackets if that's all there is.
         .replace(/\{\s+\}/g, "{}")
         // Remove spaces enclosed within round brackets if that's all there is.
