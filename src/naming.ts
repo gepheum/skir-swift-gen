@@ -1,4 +1,4 @@
-import { Record, RecordLocation, convertCase } from "skir-internal";
+import { Constant, Record, RecordLocation, convertCase } from "skir-internal";
 
 export function modulePathToCaselessEnumName(modulePath: string): string {
   return modulePath
@@ -73,7 +73,7 @@ export function getQualifiedTypeName(record: RecordLocation): string {
   ].join(".");
 }
 
-export function toStructFieldName(
+export function getSwiftFieldName(
   skirName: string,
   fieldRecursivity?: false | "soft" | "via-optional" | "hard",
 ): string {
@@ -95,6 +95,13 @@ export function isValidVariantName(lowerCamelName: string): boolean {
     !RESERVED_KEYWORDS.has(lowerCamelName) &&
     !GENERARATED_ENUM_MEMBERS.has(lowerCamelName)
   );
+}
+
+export function getSwiftConstantName(constant: Constant): string {
+  const lowerCamelName = convertCase(constant.name.text, "lowerCamel");
+  return RESERVED_KEYWORDS.has(lowerCamelName)
+    ? lowerCamelName.concat("_")
+    : lowerCamelName;
 }
 
 const RESERVED_KEYWORDS = new Set<string>([

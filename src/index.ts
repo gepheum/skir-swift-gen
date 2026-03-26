@@ -1,15 +1,14 @@
 // Add the "Skir" enum containing unambiguous names...
 // Be consistent with the ";"
 // hash() and hashValue seem to be generated properties on everything
-// Add serialziers
 // Split back into multiple files...
 // Add toString, equals
 // Add methods
 // Add goldens
-// Add constants
 
 import {
   type CodeGenerator,
+  type Constant,
   convertCase,
   type Doc,
   type Field,
@@ -23,12 +22,13 @@ import { z } from "zod";
 import { KeyedArrayContext } from "./keyed_array_context.js";
 import {
   getQualifiedTypeName,
+  getSwiftConstantName,
+  getSwiftFieldName,
   getTypeName,
   getTypeRef,
   isValidVariantName,
   ModuleContext,
   modulePathToCaselessEnumName,
-  toStructFieldName,
 } from "./naming.js";
 import { TypeSpeller } from "./type_speller.js";
 
@@ -103,8 +103,12 @@ class SwiftSourceFileGenerator {
         (r) => r.kind === "record",
       );
       this.writeCodeForRecords(records);
+      for (const constant of skirModule.constants) {
+        this.writeConstant(constant);
+      }
       this.writeCodeForModuleSerializers(records);
       this.push("}\n\n");
+
       this.currentModuleContext = null;
     }
 
@@ -112,13 +116,6 @@ class SwiftSourceFileGenerator {
     //   this.pushSeparator("Methods");
     //   for (const method of this.inModule.methods) {
     //     this.writeMethod(method);
-    //   }
-    // }
-
-    // if (this.inModule.constants.length) {
-    //   this.pushSeparator("Constants");
-    //   for (const constant of this.inModule.constants) {
-    //     this.writeConstant(constant);
     //   }
     // }
 
@@ -144,7 +141,7 @@ class SwiftSourceFileGenerator {
     const qualifiedSelfType = getQualifiedTypeName(structLocation);
     this.push(`public struct ${typeName} {\n`);
     for (const field of struct.fields) {
-      const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
       const fieldType = typeSpeller.getSwiftType(
         field.type!,
         structLocation,
@@ -175,7 +172,7 @@ class SwiftSourceFileGenerator {
 
     this.push("public static let defaultValue = ", selfTypeRef, "(\n");
     for (const field of struct.fields) {
-      const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
       const defaultExpression = typeSpeller.getDefaultExpression(
         field.type!,
         structLocation,
@@ -188,7 +185,7 @@ class SwiftSourceFileGenerator {
 
     this.push("fileprivate final class _Builder {\n");
     for (const field of struct.fields) {
-      const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
       const fieldType = typeSpeller.getSwiftType(
         field.type!,
         structLocation,
@@ -210,7 +207,7 @@ class SwiftSourceFileGenerator {
     this.push("func build() -> ", selfTypeRef, " {\n");
     this.push("return ", selfTypeRef, "(\n");
     for (const field of struct.fields) {
-      const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
       this.push(`${fieldName}: ${fieldName},\n`);
     }
     this.push("_unrecognized: _unrecognized,\n");
@@ -221,8 +218,8 @@ class SwiftSourceFileGenerator {
     // Add computed properties for recursive fields.
     for (const field of struct.fields) {
       if (field.isRecursive !== "hard") continue;
-      const getterName = toStructFieldName(field.name.text);
-      const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+      const getterName = getSwiftFieldName(field.name.text);
+      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
       const skirType = field.type!;
       const returnType = typeSpeller.getSwiftType(skirType, structLocation);
       const defaultExpression = typeSpeller.getDefaultExpression(
@@ -240,7 +237,7 @@ class SwiftSourceFileGenerator {
     // The partial() static factory method.
     this.push("public static func partial(\n");
     for (const field of struct.fields) {
-      const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
       const fieldType = typeSpeller.getSwiftType(
         field.type!,
         structLocation,
@@ -256,7 +253,7 @@ class SwiftSourceFileGenerator {
     this.push(") -> ", selfTypeRef, " {\n");
     this.push("return ", selfTypeRef, "(\n");
     for (const field of struct.fields) {
-      const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
       this.push(`${fieldName}: ${fieldName},\n`);
     }
     this.push("_unrecognized: nil,\n");
@@ -265,7 +262,7 @@ class SwiftSourceFileGenerator {
 
     this.push("public func copy(\n");
     for (const field of struct.fields) {
-      const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
       const fieldType = typeSpeller.getSwiftType(
         field.type!,
         structLocation,
@@ -276,7 +273,7 @@ class SwiftSourceFileGenerator {
     this.push(") -> ", selfTypeRef, " {\n");
     this.push("return ", selfTypeRef, "(\n");
     for (const field of struct.fields) {
-      const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
       this.push(`${fieldName}: {\n`);
       this.push(`switch ${fieldName} {\n`);
       this.push("case .keep:\n");
@@ -489,7 +486,7 @@ class SwiftSourceFileGenerator {
 
   private writeCodeForModuleSerializers(records: readonly Record[]): void {
     this.push("private static let _initializeModuleSerializers: Void = {\n");
-    for (const record of this.flattenRecords(records)) {
+    for (const record of flattenRecords(records)) {
       this.writeCodeForRecordSerializerInitialization(record);
     }
     this.push("}();\n\n");
@@ -500,7 +497,7 @@ class SwiftSourceFileGenerator {
     const typeRef = getTypeRef(recordLocation, this.currentModuleContext);
     if (record.recordType === "struct") {
       for (const field of record.fields) {
-        const fieldName = toStructFieldName(field.name.text, field.isRecursive);
+        const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
         const serializerExpr = this.typeSpeller.getSerializerExpression(
           field.type!,
           this.currentModuleContext,
@@ -572,13 +569,22 @@ class SwiftSourceFileGenerator {
     this.push(`${typeRef}._typeAdapter.finalize();\n\n`);
   }
 
-  private flattenRecords(records: readonly Record[]): Record[] {
-    const result: Record[] = [];
-    for (const record of records) {
-      result.push(record);
-      result.push(...this.flattenRecords(record.nestedRecords));
-    }
-    return result;
+  private writeConstant(constant: Constant): void {
+    const { typeSpeller } = this;
+    const constantName = getSwiftConstantName(constant);
+    const type = constant.type!;
+    this.push(commentify(docToCommentText(constant.doc)));
+
+    // Use LazyLock for lazy initialization from JSON.
+    const swiftType = typeSpeller.getSwiftType(type, this.currentModuleContext);
+    const serializerExpr = typeSpeller.getSerializerExpression(type, null);
+    const jsonLiteral = toSwiftStringLiteral(
+      JSON.stringify(constant.valueAsDenseJson),
+    );
+    this.push(
+      `public static let ${constantName} = try! `,
+      `${serializerExpr}.fromJson(${jsonLiteral});\n\n`,
+    );
   }
 
   private getVariantName(
@@ -701,8 +707,18 @@ class SwiftSourceFileGenerator {
 
   private readonly typeSpeller: TypeSpeller;
   private readonly keyedArrayContext: KeyedArrayContext;
+  // TODO; remove this
   private currentModuleContext: ModuleContext | null = null;
   private code = "";
+}
+
+function flattenRecords(records: readonly Record[]): Record[] {
+  const result: Record[] = [];
+  for (const record of records) {
+    result.push(record);
+    result.push(...flattenRecords(record.nestedRecords));
+  }
+  return result;
 }
 
 function resolveMaybeIndirect(type: ResolvedType): "indirect " | "" {

@@ -20,55 +20,6 @@ extension SkirClient {
     }
 
     // =============================================================================
-    // JsonFlavor
-    // =============================================================================
-
-    /// When serializing a value to JSON, you can choose one of two flavors.
-    public enum JsonFlavor: Equatable {
-        /// Structs are serialized as JSON arrays, where the field numbers in the
-        /// index definition match the indexes in the array. Enum constants are
-        /// serialized as numbers.
-        ///
-        /// This is the serialization format you should choose in most cases. It is
-        /// also the default.
-        case dense
-
-        /// Structs are serialized as JSON objects, and enum constants are
-        /// serialized as strings.
-        ///
-        /// This format is more verbose and readable, but it should not be used if
-        /// you need persistence, because skir allows fields to be renamed in record
-        /// definitions. In other words, never store a readable JSON on disk or in a
-        /// database.
-        case readable
-    }
-
-    // =============================================================================
-    // UnrecognizedValues
-    // =============================================================================
-
-    /// What to do with unrecognized fields when deserializing a value from dense
-    /// JSON or binary data.
-    ///
-    /// Pick `keep` if the input JSON or binary string comes from a trusted
-    /// program which might have been built from more recent source files. Always
-    /// pick `drop` if the input JSON or binary string might come from a malicious
-    /// user.
-    public enum UnrecognizedValues: Equatable {
-        /// Unrecognized fields found when deserializing a value are dropped.
-        ///
-        /// Pick this option if the input JSON or binary string might come from a
-        /// malicious user.
-        case drop
-
-        /// Unrecognized fields found when deserializing a value from dense JSON or
-        /// binary data are saved. If the value is later re-serialized in the same
-        /// format (dense JSON or binary), the unrecognized fields will be present
-        /// in the serialized form.
-        case keep
-    }
-
-    // =============================================================================
     // Serializer
     // =============================================================================
 
@@ -80,21 +31,26 @@ extension SkirClient {
         // MARK: - Public API
 
         /// Serializes `v` to a JSON string.
-        public func toJson(_ v: T, flavor: JsonFlavor) -> String {
+        ///
+        /// - Parameter readable: When `true`, structs are serialized as JSON objects
+        ///   and enum constants as strings. This format is more verbose and readable,
+        ///   but should not be used if you need persistence, because skir allows
+        ///   fields to be renamed in record definitions. In other words, never store
+        ///   a readable JSON on disk or in a database.
+        public func toJson(_ v: T, readable: Bool = false) -> String {
             var out = ""
-            let eolIndent: String?
-            switch flavor {
-            case .readable:
-                eolIndent = "\n"
-            case .dense:
-                eolIndent = nil
-            }
+            let eolIndent: String? = readable ? "\n" : nil
             adapter.toJson(v, eolIndent: eolIndent, out: &out)
             return out
         }
 
         /// Deserializes a JSON string into a value of type `T`.
-        public func fromJson(_ code: String, policy: UnrecognizedValues) throws -> T {
+        ///
+        /// - Parameter keepUnrecognized: When `true`, unrecognized fields found
+        ///   when deserializing are saved. If the value is later re-serialized, the
+        ///   unrecognized fields will be present in the serialized form. Set to
+        ///   `false` (the default) if the input might come from a malicious user.
+        public func fromJson(_ code: String, keepUnrecognized: Bool = false) throws -> T {
             guard let data = code.data(using: .utf8) else {
                 throw DeserializeError.invalidJson("invalid UTF-8 input")
             }
@@ -104,7 +60,6 @@ extension SkirClient {
             } catch {
                 throw DeserializeError.invalidJson(error.localizedDescription)
             }
-            let keepUnrecognized = policy == .keep
             return try adapter.fromJson(jsonValue, keepUnrecognizedValues: keepUnrecognized)
         }
 
@@ -120,9 +75,13 @@ extension SkirClient {
         /// Deserializes a value from the Skir binary wire format.
         ///
         /// If `bytes` lacks the `"skir"` prefix the payload is treated as a UTF-8
-        /// JSON string and parsed via `fromJson(_:policy:)`.
-        public func fromBytes(_ bytes: [UInt8], policy: UnrecognizedValues) throws -> T {
-            let keepUnrecognized = policy == .keep
+        /// JSON string and parsed via `fromJson(_:keepUnrecognized:)`.
+        ///
+        /// - Parameter keepUnrecognized: When `true`, unrecognized fields found
+        ///   when deserializing are saved. If the value is later re-serialized, the
+        ///   unrecognized fields will be present in the serialized form. Set to
+        ///   `false` (the default) if the input might come from a malicious user.
+        public func fromBytes(_ bytes: [UInt8], keepUnrecognized: Bool = false) throws -> T {
             if bytes.count >= 4 && bytes[0] == 115 && bytes[1] == 107 && bytes[2] == 105 && bytes[3] == 114 {
                 // bytes start with "skir"
                 var rest = Array(bytes.dropFirst(4))
@@ -131,7 +90,7 @@ extension SkirClient {
                 guard let s = String(bytes: bytes, encoding: .utf8) else {
                     throw DeserializeError.schema("invalid UTF-8 in binary payload")
                 }
-                return try fromJson(s, policy: policy)
+                return try fromJson(s, keepUnrecognized: keepUnrecognized)
             }
         }
 

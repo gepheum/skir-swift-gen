@@ -9,7 +9,7 @@ import {
   ResolvedRecordRef,
   ResolvedType,
 } from "skir-internal";
-import { toStructFieldName } from "./naming.js";
+import { getSwiftFieldName } from "./naming.js";
 import { TypeSpeller } from "./type_speller.js";
 
 export interface KeySpec {
@@ -46,7 +46,7 @@ export class KeyedArrayContext {
         ? typeSpeller.getSwiftType(keyType, null).concat("._Kind")
         : typeSpeller.getSwiftType(keyType, null);
       const swiftKeyExpr = type.key.path
-        .map((p) => toStructFieldName(p.name.text))
+        .map((p) => getSwiftFieldName(p.name.text))
         .join(".");
       const keySpec: KeySpec = {
         specName: specName,
