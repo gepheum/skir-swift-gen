@@ -138,9 +138,9 @@ export class TypeSpeller {
       case "record": {
         const typeRef = getTypeRef(this.recordMap.get(type.key)!, context);
         if (init) {
-          result = `SkirClient.Serializer(adapter: ${typeRef}._adapterForInit())`;
+          result = `SkirClient.Serializer(adapter: ${typeRef}._typeAdapter)`;
         } else {
-          result = `${typeRef}.serializer()`;
+          result = `${typeRef}.serializer`;
         }
         break;
       }
