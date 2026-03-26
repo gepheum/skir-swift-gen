@@ -1,4 +1,10 @@
-import { Constant, Record, RecordLocation, convertCase } from "skir-internal";
+import {
+  Constant,
+  Method,
+  Record,
+  RecordLocation,
+  convertCase,
+} from "skir-internal";
 
 export function modulePathToCaselessEnumName(modulePath: string): string {
   return modulePath
@@ -13,6 +19,12 @@ export function modulePathToCaselessEnumName(modulePath: string): string {
 /** Returns the name of the Swift type for the given Skir record. */
 export function getTypeName(record: Record): string {
   const name = record.name.text;
+  return RESERVED_KEYWORDS.has(name) ? name.concat("_") : name;
+}
+
+/** Returns the name of the Swift type for the given Skir method. */
+export function getSwiftMethodName(method: Method): string {
+  const name = method.name.text;
   return RESERVED_KEYWORDS.has(name) ? name.concat("_") : name;
 }
 

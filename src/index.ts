@@ -12,6 +12,7 @@ import {
   type Declaration,
   type Doc,
   type Field,
+  type Method,
   type Module,
   type Record,
   type ResolvedType,
@@ -22,6 +23,7 @@ import {
   getQualifiedTypeName,
   getSwiftConstantName,
   getSwiftFieldName,
+  getSwiftMethodName,
   getTypeName,
   getTypeRef,
   isValidVariantName,
@@ -101,6 +103,9 @@ class SwiftModuleCodeGenerator {
     this.writeCodeForRecords(records);
     for (const constant of this.inModule.constants) {
       this.writeConstant(constant);
+    }
+    for (const method of this.inModule.methods) {
+      this.writeMethod(method);
     }
     this.writeCodeForModuleSerializers(records);
     this.push("}\n\n");
@@ -564,6 +569,40 @@ class SwiftModuleCodeGenerator {
     this.push(`${typeRef}._typeAdapter.finalize();\n\n`);
   }
 
+  private writeMethod(method: Method): void {
+    const { typeSpeller } = this;
+    const methodName = getSwiftMethodName(method);
+    const requestType = method.requestType!;
+    const responseType = method.responseType!;
+    const requestSwiftType = typeSpeller.getSwiftType(
+      requestType,
+      this.currentModuleContext,
+    );
+    const responseSwiftType = typeSpeller.getSwiftType(
+      responseType,
+      this.currentModuleContext,
+    );
+    const requestSerializerExpr = typeSpeller.getSerializerExpression(
+      requestType,
+      this.currentModuleContext,
+    );
+    const responseSerializerExpr = typeSpeller.getSerializerExpression(
+      responseType,
+      this.currentModuleContext,
+    );
+    this.push(commentify(docToCommentText(method.doc)));
+    this.push(
+      `public static let ${methodName} = SkirClient.Method<${requestSwiftType}, ${responseSwiftType}>(
+`,
+      `name: ${JSON.stringify(method.name.text)},\n`,
+      `number: ${method.number},\n`,
+      `requestSerializer: ${requestSerializerExpr},\n`,
+      `responseSerializer: ${responseSerializerExpr},\n`,
+      `doc: ${JSON.stringify(docToCommentText(method.doc))}\n`,
+      ")\n\n",
+    );
+  }
+
   private writeConstant(constant: Constant): void {
     const { typeSpeller } = this;
     const constantName = getSwiftConstantName(constant);
@@ -706,7 +745,9 @@ class SwiftModuleCodeGenerator {
   private code = "";
 }
 
-function findUnambiguousNamesAcrossModules(modules: readonly Module[]): readonly Declaration[] {
+function findUnambiguousNamesAcrossModules(
+  modules: readonly Module[],
+): readonly Declaration[] {
   const nameToDecls = new Map<string, Declaration[]>();
   for (const module of modules) {
     for (const decl of module.declarations) {
