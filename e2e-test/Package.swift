@@ -4,19 +4,26 @@ import PackageDescription
 let package = Package(
     name: "e2e-test",
     platforms: [.macOS(.v12)],
-    targets: [
-        .target(
-            name: "SkirClient",
-            path: "SkirClient"
+    dependencies: [
+        .package(
+            url: "https://github.com/gepheum/skir-swift-client",
+            branch: "main"
         ),
+    ],
+    targets: [
         .executableTarget(
             name: "e2e-test",
-            dependencies: ["SkirClient"],
+            dependencies: [
+                .product(name: "SkirClient", package: "skir-swift-client"),
+            ],
             path: "Sources"
         ),
         .testTarget(
             name: "e2e-testTests",
-            dependencies: ["e2e-test", "SkirClient"],
+            dependencies: [
+                "e2e-test",
+                .product(name: "SkirClient", package: "skir-swift-client"),
+            ],
             path: "Tests"
         ),
     ]
