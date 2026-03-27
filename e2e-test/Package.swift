@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "e2e-test",
+    platforms: [.macOS(.v12)],
     targets: [
         .executableTarget(
             name: "e2e-test",

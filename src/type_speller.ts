@@ -150,7 +150,7 @@ export class TypeSpeller {
       return `SkirClient.Internal.recursiveSerializer(\n${result}\n)`;
     }
     if (fieldRecursivity === "via-optional") {
-      return `SkirClient.Internal.optionBoxSerializer(\n${result}\n)`;
+      return `SkirClient.Internal.indirectOptionalSerializer(\n${result}\n)`;
     }
     return result;
   }

@@ -90,7 +90,7 @@ extension SkirClient {
             )
         }
 
-        public static func optionBoxSerializer<Wrapped>(
+        public static func indirectOptionalSerializer<Wrapped>(
             _ other: SkirClient.Serializer<Wrapped>
         ) -> SkirClient.Serializer<SkirClient.IndirectOptional<Wrapped>> {
             SkirClient.Serializer<SkirClient.IndirectOptional<Wrapped>>(
