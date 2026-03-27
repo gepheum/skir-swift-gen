@@ -1,2 +1,1 @@
 # skir-swift-gen
-
