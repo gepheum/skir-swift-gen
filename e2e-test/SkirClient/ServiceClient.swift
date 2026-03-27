@@ -1,27 +1,5 @@
 import Foundation
 
-// =========================================================================
-// RpcError
-// =========================================================================
-
-/// Error returned by `ServiceClient.invokeRemote` when the server responds
-/// with a non-2xx status code or when a network-level failure occurs.
-public struct RpcError: Error, CustomStringConvertible {
-    /// The HTTP status code returned by the server, or `0` for network-level
-    /// failures (e.g. DNS error, connection refused, timeout).
-    public let statusCode: Int
-    /// A human-readable description of the error.
-    public let message: String
-
-    public var description: String {
-        "rpc error \(statusCode): \(message)"
-    }
-}
-
-// =========================================================================
-// ServiceClient
-// =========================================================================
-
 /// Sends RPCs to a Skir service.
 ///
 /// ## Example
@@ -125,5 +103,19 @@ public final class ServiceClient {
         } catch {
             throw RpcError(statusCode: 0, message: "failed to decode response: \(error)")
         }
+    }
+}
+
+/// Error returned by `ServiceClient.invokeRemote` when the server responds
+/// with a non-2xx status code or when a network-level failure occurs.
+struct RpcError: Error, CustomStringConvertible {
+    /// The HTTP status code returned by the server, or `0` for network-level
+    /// failures (e.g. DNS error, connection refused, timeout).
+    let statusCode: Int
+    /// A human-readable description of the error.
+    let message: String
+
+    var description: String {
+        "rpc error \(statusCode): \(message)"
     }
 }
