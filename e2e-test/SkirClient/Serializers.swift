@@ -138,8 +138,8 @@ private func asJsonUInt64(_ value: Any) -> UInt64? {
         return number.uint64Value
     }
 
-private func schemaError(_ message: String) -> DeserializeError {
-        .schema(message)
+private func schemaError(_ message: String) -> SkirError {
+        SkirError(message)
     }
 
 private func clampTruncatingInt64(_ value: Double) -> Int64 {

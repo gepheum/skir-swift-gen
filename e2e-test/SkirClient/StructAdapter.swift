@@ -338,7 +338,7 @@ extension Internal {
             if wire == 250 {
                 let decoded = try decodeNumber(&input)
                 guard decoded >= 0 else {
-                    throw DeserializeError.schema("unexpected negative struct slot count")
+                    throw SkirError("unexpected negative struct slot count")
                 }
                 slotCount = Int(decoded)
             } else {

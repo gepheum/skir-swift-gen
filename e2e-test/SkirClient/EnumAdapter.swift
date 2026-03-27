@@ -34,11 +34,11 @@ extension Internal {
         }
 
         func wrapFromJson(_ json: Any, keepUnrecognized: Bool) throws -> T {
-            throw DeserializeError.schema("variant '\(variantName)' is a constant, not a wrapper")
+            throw SkirError("variant '\(variantName)' is a constant, not a wrapper")
         }
 
         func wrapDecode(_ input: inout [UInt8], keepUnrecognized: Bool) throws -> T {
-            throw DeserializeError.schema("variant '\(variantName)' is a constant, not a wrapper")
+            throw SkirError("variant '\(variantName)' is a constant, not a wrapper")
         }
     }
 
@@ -275,7 +275,7 @@ extension Internal {
                         if let constant = entry.constant() {
                             return constant
                         } else {
-                            throw DeserializeError.schema("variant '\(str)' is a wrapper, not a constant")
+                            throw SkirError("variant '\(str)' is a wrapper, not a constant")
                         }
                     }
                 }
@@ -293,7 +293,7 @@ extension Internal {
                 case .removed:
                     return defaultValue
                 case .constant:
-                    throw DeserializeError.schema("variant number \(num) is a constant, not a wrapper")
+                    throw SkirError("variant number \(num) is a constant, not a wrapper")
                 case .wrapper(let ko):
                     if ko < kindOrdinalToEntry.count, let entry = kindOrdinalToEntry[ko] {
                         return try entry.wrapFromJson(arr[1], keepUnrecognized: keepUnrecognizedValues)
@@ -307,7 +307,7 @@ extension Internal {
                 if let ko = nameToKindOrdinal[name] {
                     if ko < kindOrdinalToEntry.count, let entry = kindOrdinalToEntry[ko] {
                         if entry.constant() != nil {
-                            throw DeserializeError.schema("variant '\(name)' is a constant, not a wrapper")
+                            throw SkirError("variant '\(name)' is a constant, not a wrapper")
                         }
                         return try entry.wrapFromJson(valueJson, keepUnrecognized: keepUnrecognizedValues)
                     }

@@ -1,24 +1,6 @@
 import Foundation
 
 // =============================================================================
-// DeserializeError
-// =============================================================================
-
-public enum DeserializeError: Error, CustomStringConvertible {
-    case invalidJson(String)
-    case schema(String)
-
-    public var description: String {
-        switch self {
-        case let .invalidJson(message):
-            return "invalid JSON: \(message)"
-        case let .schema(message):
-            return message
-        }
-    }
-}
-
-// =============================================================================
 // Serializer
 // =============================================================================
 
@@ -51,13 +33,13 @@ public final class Serializer<T> {
     ///   `false` (the default) if the input might come from a malicious user.
     public func fromJson(_ code: String, keepUnrecognized: Bool = false) throws -> T {
         guard let data = code.data(using: .utf8) else {
-            throw DeserializeError.invalidJson("invalid UTF-8 input")
+            throw SkirError("invalid JSON: invalid UTF-8 input")
         }
         let jsonValue: Any
         do {
             jsonValue = try JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)
         } catch {
-            throw DeserializeError.invalidJson(error.localizedDescription)
+            throw SkirError("invalid JSON: \(error.localizedDescription)")
         }
         return try adapter.fromJson(jsonValue, keepUnrecognizedValues: keepUnrecognized)
     }
@@ -87,7 +69,7 @@ public final class Serializer<T> {
             return try adapter.decode(&rest, keepUnrecognizedValues: keepUnrecognized)
         } else {
             guard let s = String(bytes: bytes, encoding: .utf8) else {
-                throw DeserializeError.schema("invalid UTF-8 in binary payload")
+                throw SkirError("invalid UTF-8 in binary payload")
             }
             return try fromJson(s, keepUnrecognized: keepUnrecognized)
         }
@@ -126,6 +108,11 @@ public final class Serializer<T> {
     public init(adapter: any TypeAdapter<T>) {
         self.adapter = adapter
     }
+}
+
+struct SkirError: Error, CustomStringConvertible {
+    let description: String
+    init(_ message: String) { self.description = message }
 }
 
 // =============================================================================
