@@ -1,7 +1,8 @@
 generators:
   - mod: ../../../dist/index.js
     outDir: ./Sources/skirout
-    config: {}
+    config:
+      public: false
 
 dependencies:
   "@gepheum/skir-fantasy-game-example": v1.0.0

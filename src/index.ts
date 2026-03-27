@@ -28,7 +28,14 @@ import {
 } from "./naming.js";
 import { TypeSpeller } from "./type_speller.js";
 
-const Config = z.strictObject({});
+const Config = z.strictObject({
+  public: z
+    .boolean()
+    .default(false)
+    .describe(
+      "Whether to generate public declarations. Default to false: declarations are internal.",
+    ),
+});
 
 type Config = z.infer<typeof Config>;
 
@@ -54,7 +61,7 @@ class SwiftCodeGenerator implements CodeGenerator<Config> {
     }
     outputFiles.push({
       path: "Skir.swift",
-      code: generateSkirEnumCode(input.modules),
+      code: generateSkirEnumCode(input.modules, config),
     });
     return { files: outputFiles };
   }
@@ -78,7 +85,7 @@ class SwiftModuleCodeGenerator {
     this.push(
       commentify(`Caseless enum for Skir module '${this.inModule.path}'`),
     );
-    this.push(`public enum ${caselessEnumName} {\n`);
+    this.push(`${this.pub}enum ${caselessEnumName} {\n`);
     const records = this.inModule.declarations.filter(
       (r) => r.kind === "record",
     );
@@ -113,7 +120,7 @@ class SwiftModuleCodeGenerator {
     const selfTypeRef = getTypeRef(structLocation, structLocation);
     const qualifiedSelfType = getQualifiedTypeName(structLocation);
     this.push(
-      `public struct ${typeName}: Swift.CustomStringConvertible, Swift.Equatable {\n`,
+      `${this.pub}struct ${typeName}: Swift.CustomStringConvertible, Swift.Equatable {\n`,
     );
     for (const field of struct.fields) {
       const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
@@ -136,7 +143,7 @@ class SwiftModuleCodeGenerator {
             : []),
         ]),
       );
-      this.push(`public let ${fieldName}: ${fieldType}\n`);
+      this.push(`${this.pub}let ${fieldName}: ${fieldType}\n`);
     }
     this.push(
       "private let _unrecognized: SkirClient.UnrecognizedFields<",
@@ -145,50 +152,32 @@ class SwiftModuleCodeGenerator {
     );
     this.push("\n");
 
-    // The public memberwise init (excludes _unrecognized, which is an impl detail).
-    this.push("public init(\n");
-    for (const field of struct.fields) {
-      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
-      const fieldType = typeSpeller.getSwiftType(
-        field.type!,
-        structLocation,
-        field.isRecursive,
+    if (this.config.public) {
+      this.push(`${this.pub}init(\n`);
+      for (const field of struct.fields) {
+        const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
+        const fieldType = typeSpeller.getSwiftType(
+          field.type!,
+          structLocation,
+          field.isRecursive,
+        );
+        this.push(`${fieldName}: ${fieldType},\n`);
+      }
+      this.push(
+        "_unrecognized: SkirClient.UnrecognizedFields<",
+        selfTypeRef,
+        "> = nil,\n",
       );
-      this.push(`${fieldName}: ${fieldType},\n`);
+      this.push(") {\n");
+      for (const field of struct.fields) {
+        const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
+        this.push(`self.${fieldName} = ${fieldName}\n`);
+      }
+      this.push("self._unrecognized = _unrecognized\n");
+      this.push("}\n\n");
     }
-    this.push(") {\n");
-    for (const field of struct.fields) {
-      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
-      this.push(`self.${fieldName} = ${fieldName}\n`);
-    }
-    this.push("self._unrecognized = nil\n");
-    this.push("}\n\n");
 
-    // Internal init used by generated code that needs to carry _unrecognized.
-    this.push("init(\n");
-    for (const field of struct.fields) {
-      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
-      const fieldType = typeSpeller.getSwiftType(
-        field.type!,
-        structLocation,
-        field.isRecursive,
-      );
-      this.push(`${fieldName}: ${fieldType},\n`);
-    }
-    this.push(
-      "_unrecognized: SkirClient.UnrecognizedFields<",
-      selfTypeRef,
-      ">,\n",
-    );
-    this.push(") {\n");
-    for (const field of struct.fields) {
-      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
-      this.push(`self.${fieldName} = ${fieldName}\n`);
-    }
-    this.push("self._unrecognized = _unrecognized\n");
-    this.push("}\n\n");
-
-    this.push("public static let defaultValue = ", selfTypeRef, "(\n");
+    this.push(`${this.pub}static let defaultValue = `, selfTypeRef, "(\n");
     for (const field of struct.fields) {
       const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
       const defaultExpression = typeSpeller.getDefaultExpression(
@@ -212,7 +201,7 @@ class SwiftModuleCodeGenerator {
         skirType,
         structLocation,
       );
-      this.push(`public var ${getterName}: ${returnType} {\n`);
+      this.push(`${this.pub}var ${getterName}: ${returnType} {\n`);
       this.push(`switch self.${fieldName} {\n`);
       this.push(`case .some(let rec): rec\n`);
       this.push(`case .none: ${defaultExpression}\n`);
@@ -221,7 +210,7 @@ class SwiftModuleCodeGenerator {
     }
 
     // The partial() static factory method.
-    this.push("public static func partial(\n");
+    this.push(`${this.pub}static func partial(\n`);
     for (const field of struct.fields) {
       const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
       const fieldType = typeSpeller.getSwiftType(
@@ -246,7 +235,7 @@ class SwiftModuleCodeGenerator {
     this.push(");\n");
     this.push("}\n\n");
 
-    this.push("public func copy(\n");
+    this.push(`${this.pub}func copy(\n`);
     for (const field of struct.fields) {
       const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
       const fieldType = typeSpeller.getSwiftType(
@@ -274,7 +263,7 @@ class SwiftModuleCodeGenerator {
     this.push("}\n\n");
 
     this.push(
-      `public static func == (lhs: ${selfTypeRef}, rhs: ${selfTypeRef}) -> Bool {\n`,
+      `${this.pub}static func == (lhs: ${selfTypeRef}, rhs: ${selfTypeRef}) -> Bool {\n`,
     );
     for (const field of struct.fields) {
       const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
@@ -292,12 +281,12 @@ class SwiftModuleCodeGenerator {
     this.push("return true\n");
     this.push("}\n\n");
 
-    this.push("public var description: String {\n");
+    this.push(`${this.pub}var description: String {\n`);
     this.push("Self.serializer.toJson(self, readable: true)\n");
     this.push("}\n\n");
 
     this.push(
-      "public static var serializer: SkirClient.Serializer<",
+      `${this.pub}static var serializer: SkirClient.Serializer<`,
       selfTypeRef,
       "> {\n",
       "_ = ",
@@ -371,19 +360,19 @@ class SwiftModuleCodeGenerator {
           `Spec for arrays of \`${typeName}\` items keyed by \`${keySpec.swiftKeyExpr}\`.`,
           `Example: SkirClient.KeyedArray<${selfTypeRef}.${keySpec.specName}>`,
         ]),
-        `public enum ${keySpec.specName}: SkirClient.KeyedArraySpec {\n`,
-        `public typealias Item = ${qualifiedSelfType}\n`,
-        `public typealias Key = ${keySpec.swiftKeyType}\n`,
+        `${this.pub}enum ${keySpec.specName}: SkirClient.KeyedArraySpec {\n`,
+        `${this.pub}typealias Item = ${qualifiedSelfType}\n`,
+        `${this.pub}typealias Key = ${keySpec.swiftKeyType}\n`,
         "\n",
-        "public static func getKey(from item: Item) -> Key {\n",
+        `${this.pub}static func getKey(from item: Item) -> Key {\n`,
         `return item.${keySpec.swiftKeyExpr}\n`,
         "}\n",
         "\n",
-        "public static func keyExtractor() -> String {\n",
+        `${this.pub}static func keyExtractor() -> String {\n`,
         `return ${JSON.stringify(keySpec.keyExtractor)}\n`,
         "}\n",
         "\n",
-        "public static var defaultItem: Item {\n",
+        `${this.pub}static var defaultItem: Item {\n`,
         `return ${qualifiedSelfType}.defaultValue\n`,
         "}\n",
         "}\n\n",
@@ -401,7 +390,7 @@ class SwiftModuleCodeGenerator {
     // How to refer to this type from this type.
     const selfTypeRef = getTypeRef(recordLocation, recordLocation);
     this.push(
-      `public enum ${typeName}: Swift.CustomStringConvertible, Swift.Equatable {\n`,
+      `${this.pub}enum ${typeName}: Swift.CustomStringConvertible, Swift.Equatable {\n`,
     );
     this.push(
       commentify([
@@ -434,7 +423,7 @@ class SwiftModuleCodeGenerator {
     }
     this.push("\n");
     if (this.keyedArrayContext.isEnumUsedAsKey(record)) {
-      this.push("public enum _Kind: Hashable {\n");
+      this.push(`${this.pub}enum _Kind: Hashable {\n`);
       this.push("case unknown;\n");
       for (const variant of variants) {
         const variantName = convertCase(variant.name.text, "lowerCamel").concat(
@@ -444,7 +433,7 @@ class SwiftModuleCodeGenerator {
       }
       this.push("}\n\n");
 
-      this.push("public var kind: _Kind {\n");
+      this.push(`${this.pub}var kind: _Kind {\n`);
       this.push("switch self {\n");
       this.push("case .unknown:\n");
       this.push("return .unknown\n");
@@ -463,15 +452,15 @@ class SwiftModuleCodeGenerator {
       this.push("}\n\n");
     }
     this.push(
-      "public static let unknownValue = unknown(unrecognized: nil);\n\n",
+      `${this.pub}static let unknownValue = unknown(unrecognized: nil);\n\n`,
     );
 
-    this.push("public var description: String {\n");
+    this.push(`${this.pub}var description: String {\n`);
     this.push("Self.serializer.toJson(self, readable: true)\n");
     this.push("}\n\n");
 
     this.push(
-      `public static func == (lhs: ${selfTypeRef}, rhs: ${selfTypeRef}) -> Bool {\n`,
+      `${this.pub}static func == (lhs: ${selfTypeRef}, rhs: ${selfTypeRef}) -> Bool {\n`,
       "switch (lhs, rhs) {\n",
       "case (.unknown, .unknown): return true\n",
     );
@@ -491,7 +480,7 @@ class SwiftModuleCodeGenerator {
     this.push("}\n", "}\n\n");
 
     this.push(
-      "public static var serializer: SkirClient.Serializer<",
+      `${this.pub}static var serializer: SkirClient.Serializer<`,
       selfTypeRef,
       "> {\n",
       "_ = ",
@@ -660,7 +649,7 @@ class SwiftModuleCodeGenerator {
     );
     this.push(commentify(docToCommentText(method.doc)));
     this.push(
-      `public static let ${methodName} = SkirClient.Method<${requestSwiftType}, ${responseSwiftType}>(
+      `${this.pub}static let ${methodName} = SkirClient.Method<${requestSwiftType}, ${responseSwiftType}>(
 `,
       `name: ${JSON.stringify(method.name.text)},\n`,
       `number: ${method.number},\n`,
@@ -683,7 +672,7 @@ class SwiftModuleCodeGenerator {
       JSON.stringify(constant.valueAsDenseJson),
     );
     this.push(
-      `public static let ${constantName} = try! `,
+      `${this.pub}static let ${constantName} = try! `,
       `${serializerExpr}.fromJson(${jsonLiteral});\n\n`,
     );
   }
@@ -709,6 +698,10 @@ class SwiftModuleCodeGenerator {
 
   private joinLinesAndFixFormatting(): string {
     return joinLinesAndFixFormatting(this.code);
+  }
+
+  private get pub(): string {
+    return this.config.public ? "public " : "";
   }
 
   private readonly currentModuleContext: ModuleContext;
@@ -852,7 +845,10 @@ function getDeclSwiftName(decl: Declaration): string {
   }
 }
 
-function generateSkirEnumCode(modules: readonly Module[]): string {
+function generateSkirEnumCode(
+  modules: readonly Module[],
+  config: Config,
+): string {
   const allUnambiguous = findUnambiguousNamesAcrossModules(modules);
 
   // Group by module path, preserving module order.
@@ -864,9 +860,10 @@ function generateSkirEnumCode(modules: readonly Module[]): string {
     byModule.get(entry.modulePath)!.push(entry);
   }
 
+  const pub = config.public ? "public " : "";
   let code =
     "/// Convenience aliases for all names that are unambiguous across all modules.\n";
-  code += "public enum Skir {\n";
+  code += `${pub}enum Skir {\n`;
   for (const [modulePath, entries] of byModule) {
     if (entries.length === 0) continue;
     code += `// ${"=".repeat(78)}\n`;
@@ -877,9 +874,9 @@ function generateSkirEnumCode(modules: readonly Module[]): string {
       const enumName = modulePathToCaselessEnumName(modulePath);
       const swiftName = getDeclSwiftName(decl);
       if (decl.kind === "record") {
-        code += `public typealias ${swiftName} = ${enumName}.${swiftName}\n`;
+        code += `${pub}typealias ${swiftName} = ${enumName}.${swiftName}\n`;
       } else {
-        code += `public static let ${swiftName} = ${enumName}.${swiftName}\n`;
+        code += `${pub}static let ${swiftName} = ${enumName}.${swiftName}\n`;
       }
     }
     code += "\n";
