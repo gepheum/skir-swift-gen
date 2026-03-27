@@ -33,11 +33,11 @@ public enum Reflection {
 		case structRecord(StructDescriptor)
 		case enumRecord(EnumDescriptor)
 
-		func asJson() -> String {
+			public func asJson() -> String {
 			return typeDescriptorToJson(self)
 		}
 
-		static func parseFromJson(_ jsonCode: String) throws -> TypeDescriptor {
+			public static func parseFromJson(_ jsonCode: String) throws -> TypeDescriptor {
 			do {
 				guard let data = jsonCode.data(using: .utf8) else {
 					throw ParseError.message("TypeDescriptor::parse_from_json: invalid UTF-8 input")

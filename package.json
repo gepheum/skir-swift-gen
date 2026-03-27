@@ -24,8 +24,10 @@
     "build": "tsc",
     "format-skir": "cd e2e-test && skir format && cd ..",
     "format-skir:check": "cd e2e-test && skir format --ci && cd ..",
-    "format": "prettier --write \"**/*.ts\" && npm run format-skir",
-    "format:check": "prettier --check \"**/*.ts\" && npm run format-skir:check",
+    "format-swift": "xcrun swift-format format --in-place e2e-test/Tests/*.swift",
+    "format-swift:check": "xcrun swift-format lint e2e-test/Tests/*.swift",
+    "format": "prettier --write \"**/*.ts\" && npm run format-skir && npm run format-swift",
+    "format:check": "prettier --check \"**/*.ts\" && npm run format-skir:check && npm run format-swift:check",
     "test": "npm run build && cd e2e-test && skir gen && swift test && cd ..",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix"

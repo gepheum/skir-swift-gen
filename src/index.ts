@@ -790,6 +790,7 @@ const GENERATED_FILE_HEADER =
   "//   swift package add-dependency https://github.com/gepheum/skir-swift-client --branch main\n" +
   "\n" +
   "import Foundation\n" +
+  "import SkirClient\n" +
   "\n";
 
 type UnambiguousDecl = { decl: Record | Constant | Method; modulePath: string };

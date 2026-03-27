@@ -1,137 +1,134 @@
 import CoreFoundation
 import Foundation
 
-extension SkirClient.Serializer where T == Bool {
-    public static func bool() -> SkirClient.Serializer<Bool> {
-        SkirClient.Serializer<Bool>(adapter: SkirClient.BoolAdapter())
+extension Serializer where T == Bool {
+    public static func bool() -> Serializer<Bool> {
+        Serializer<Bool>(adapter: BoolAdapter())
     }
 }
 
-extension SkirClient.Serializer where T == Int32 {
-    public static func int32() -> SkirClient.Serializer<Int32> {
-        SkirClient.Serializer<Int32>(adapter: SkirClient.Int32Adapter())
+extension Serializer where T == Int32 {
+    public static func int32() -> Serializer<Int32> {
+        Serializer<Int32>(adapter: Int32Adapter())
     }
 }
 
-extension SkirClient.Serializer where T == Int64 {
-    public static func int64() -> SkirClient.Serializer<Int64> {
-        SkirClient.Serializer<Int64>(adapter: SkirClient.Int64Adapter())
+extension Serializer where T == Int64 {
+    public static func int64() -> Serializer<Int64> {
+        Serializer<Int64>(adapter: Int64Adapter())
     }
 }
 
-extension SkirClient.Serializer where T == UInt64 {
-    public static func hash64() -> SkirClient.Serializer<UInt64> {
-        SkirClient.Serializer<UInt64>(adapter: SkirClient.Hash64Adapter())
+extension Serializer where T == UInt64 {
+    public static func hash64() -> Serializer<UInt64> {
+        Serializer<UInt64>(adapter: Hash64Adapter())
     }
 }
 
-extension SkirClient.Serializer where T == Float {
-    public static func float32() -> SkirClient.Serializer<Float> {
-        SkirClient.Serializer<Float>(adapter: SkirClient.Float32Adapter())
+extension Serializer where T == Float {
+    public static func float32() -> Serializer<Float> {
+        Serializer<Float>(adapter: Float32Adapter())
     }
 }
 
-extension SkirClient.Serializer where T == Double {
-    public static func float64() -> SkirClient.Serializer<Double> {
-        SkirClient.Serializer<Double>(adapter: SkirClient.Float64Adapter())
+extension Serializer where T == Double {
+    public static func float64() -> Serializer<Double> {
+        Serializer<Double>(adapter: Float64Adapter())
     }
 }
 
-extension SkirClient.Serializer where T == Foundation.Date {
-    public static func timestamp() -> SkirClient.Serializer<Foundation.Date> {
-        SkirClient.Serializer<Foundation.Date>(adapter: SkirClient.TimestampAdapter())
+extension Serializer where T == Foundation.Date {
+    public static func timestamp() -> Serializer<Foundation.Date> {
+        Serializer<Foundation.Date>(adapter: TimestampAdapter())
     }
 }
 
-extension SkirClient.Serializer where T == String {
-    public static func string() -> SkirClient.Serializer<String> {
-        SkirClient.Serializer<String>(adapter: SkirClient.StringAdapter())
+extension Serializer where T == String {
+    public static func string() -> Serializer<String> {
+        Serializer<String>(adapter: StringAdapter())
     }
 }
 
-extension SkirClient.Serializer where T == Foundation.Data {
-    public static func bytes() -> SkirClient.Serializer<Foundation.Data> {
-        SkirClient.Serializer<Foundation.Data>(adapter: SkirClient.BytesAdapter())
+extension Serializer where T == Foundation.Data {
+    public static func bytes() -> Serializer<Foundation.Data> {
+        Serializer<Foundation.Data>(adapter: BytesAdapter())
     }
 }
 
-extension SkirClient.Serializer {
+extension Serializer {
     public static func array<Element>(
-        _ item: SkirClient.Serializer<Element>,
+        _ item: Serializer<Element>,
         keyExtractor: String = ""
-    ) -> SkirClient.Serializer<[Element]> {
-        SkirClient.Serializer<[Element]>(
-            adapter: SkirClient.ArrayAdapter(item: item, keyExtractor: keyExtractor)
+    ) -> Serializer<[Element]> {
+        Serializer<[Element]>(
+            adapter: ArrayAdapter(item: item, keyExtractor: keyExtractor)
         )
     }
 
     public static func optional<Wrapped>(
-        _ other: SkirClient.Serializer<Wrapped>
-    ) -> SkirClient.Serializer<Wrapped?> {
-        SkirClient.Serializer<Wrapped?>(adapter: SkirClient.OptionalAdapter(other: other))
+        _ other: Serializer<Wrapped>
+    ) -> Serializer<Wrapped?> {
+        Serializer<Wrapped?>(adapter: OptionalAdapter(other: other))
     }
 
-    public static func keyedArray<Spec: SkirClient.KeyedArraySpec>(
-        _ item: SkirClient.Serializer<Spec.Item>
-    ) -> SkirClient.Serializer<SkirClient.KeyedArray<Spec>> {
-        SkirClient.Serializer<SkirClient.KeyedArray<Spec>>(
-            adapter: SkirClient.KeyedArrayAdapter<Spec>(item: item)
+    public static func keyedArray<Spec: KeyedArraySpec>(
+        _ item: Serializer<Spec.Item>
+    ) -> Serializer<KeyedArray<Spec>> {
+        Serializer<KeyedArray<Spec>>(
+            adapter: KeyedArrayAdapter<Spec>(item: item)
         )
     }
 }
 
-extension SkirClient {
-    public enum Internal {
+public enum Internal {
         public static func recursiveSerializer<Wrapped>(
-            _ other: SkirClient.Serializer<Wrapped>
-        ) -> SkirClient.Serializer<SkirClient.IndirectOptional<Wrapped>> {
-            SkirClient.Serializer<SkirClient.IndirectOptional<Wrapped>>(
-                adapter: SkirClient.RecursiveAdapter(other: other)
+            _ other: Serializer<Wrapped>
+        ) -> Serializer<IndirectOptional<Wrapped>> {
+            Serializer<IndirectOptional<Wrapped>>(
+                adapter: RecursiveAdapter(other: other)
             )
         }
 
         public static func indirectOptionalSerializer<Wrapped>(
-            _ other: SkirClient.Serializer<Wrapped>
-        ) -> SkirClient.Serializer<SkirClient.IndirectOptional<Wrapped>> {
-            SkirClient.Serializer<SkirClient.IndirectOptional<Wrapped>>(
-                adapter: SkirClient.OptionBoxAdapter(other: other)
+            _ other: Serializer<Wrapped>
+        ) -> Serializer<IndirectOptional<Wrapped>> {
+            Serializer<IndirectOptional<Wrapped>>(
+                adapter: OptionBoxAdapter(other: other)
             )
         }
     }
-}
 
-extension SkirClient {
-    private static let maxSafeInt64Json: Int64 = 9_007_199_254_740_991
-    private static let maxSafeHash64Json: UInt64 = 9_007_199_254_740_991
-    private static let minTimestampMillis: Int64 = -8_640_000_000_000_000
-    private static let maxTimestampMillis: Int64 = 8_640_000_000_000_000
+private let maxSafeInt64Json: Int64 = 9_007_199_254_740_991
+private let maxSafeHash64Json: UInt64 = 9_007_199_254_740_991
+private let minTimestampMillis: Int64 = -8_640_000_000_000_000
+private let maxTimestampMillis: Int64 = 8_640_000_000_000_000
 
-    private static let iso8601Formatter: ISO8601DateFormatter = {
+private let iso8601Formatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter
     }()
 
-    private static func isJsonBool(_ value: Any) -> Bool {
+private func isJsonBool(_ value: Any) -> Bool {
         guard let number = value as? NSNumber else {
             return value is Bool
         }
         return CFGetTypeID(number) == CFBooleanGetTypeID()
     }
 
-    private static func jsonNumber(_ value: Any) -> NSNumber? {
+private func jsonNumber(_ value: Any) -> NSNumber? {
         guard let number = value as? NSNumber, !isJsonBool(value) else {
             return nil
         }
         return number
     }
 
-    private static func asJsonDouble(_ value: Any) -> Double? {
+private func asJsonDouble(_ value: Any) -> Double? {
         jsonNumber(value)?.doubleValue
     }
 
-    private static func asJsonUInt64(_ value: Any) -> UInt64? {
+private func asJsonUInt64(_ value: Any) -> UInt64? {
         guard let number = jsonNumber(value) else {
             return nil
         }
@@ -141,11 +138,11 @@ extension SkirClient {
         return number.uint64Value
     }
 
-    private static func schemaError(_ message: String) -> DeserializeError {
+private func schemaError(_ message: String) -> DeserializeError {
         .schema(message)
     }
 
-    private static func clampTruncatingInt64(_ value: Double) -> Int64 {
+private func clampTruncatingInt64(_ value: Double) -> Int64 {
         if value.isNaN {
             return 0
         }
@@ -159,7 +156,7 @@ extension SkirClient {
         return Int64(truncated)
     }
 
-    private static func clampRoundedInt64(_ value: Double) -> Int64 {
+private func clampRoundedInt64(_ value: Double) -> Int64 {
         if value.isNaN {
             return 0
         }
@@ -173,7 +170,7 @@ extension SkirClient {
         return Int64(rounded)
     }
 
-    private static func clampTruncatingInt32(_ value: Double) -> Int32 {
+private func clampTruncatingInt32(_ value: Double) -> Int32 {
         if value.isNaN {
             return 0
         }
@@ -187,7 +184,7 @@ extension SkirClient {
         return Int32(truncated)
     }
 
-    private static func clampRoundedUInt64(_ value: Double) -> UInt64 {
+private func clampRoundedUInt64(_ value: Double) -> UInt64 {
         if value.isNaN || value <= 0 {
             return 0
         }
@@ -198,7 +195,7 @@ extension SkirClient {
         return UInt64(rounded)
     }
 
-    private static func takeBytes(
+private func takeBytes(
         _ count: Int,
         from input: inout [UInt8],
         errorMessage: String = "unexpected end of input"
@@ -211,7 +208,7 @@ extension SkirClient {
         return bytes
     }
 
-    internal static func readU8(_ input: inout [UInt8]) throws -> UInt8 {
+internal func readU8(_ input: inout [UInt8]) throws -> UInt8 {
         guard let byte = input.first else {
             throw schemaError("unexpected end of input")
         }
@@ -219,12 +216,12 @@ extension SkirClient {
         return byte
     }
 
-    private static func readU16(_ input: inout [UInt8]) throws -> UInt16 {
+private func readU16(_ input: inout [UInt8]) throws -> UInt16 {
         let bytes = try takeBytes(2, from: &input)
         return UInt16(bytes[0]) | (UInt16(bytes[1]) << 8)
     }
 
-    private static func readU32(_ input: inout [UInt8]) throws -> UInt32 {
+private func readU32(_ input: inout [UInt8]) throws -> UInt32 {
         let bytes = try takeBytes(4, from: &input)
         return UInt32(bytes[0])
             | (UInt32(bytes[1]) << 8)
@@ -232,11 +229,11 @@ extension SkirClient {
             | (UInt32(bytes[3]) << 24)
     }
 
-    private static func readI32(_ input: inout [UInt8]) throws -> Int32 {
+private func readI32(_ input: inout [UInt8]) throws -> Int32 {
         Int32(bitPattern: try readU32(&input))
     }
 
-    private static func readU64(_ input: inout [UInt8]) throws -> UInt64 {
+private func readU64(_ input: inout [UInt8]) throws -> UInt64 {
         let bytes = try takeBytes(8, from: &input)
         return UInt64(bytes[0])
             | (UInt64(bytes[1]) << 8)
@@ -248,19 +245,19 @@ extension SkirClient {
             | (UInt64(bytes[7]) << 56)
     }
 
-    private static func readI64(_ input: inout [UInt8]) throws -> Int64 {
+private func readI64(_ input: inout [UInt8]) throws -> Int64 {
         Int64(bitPattern: try readU64(&input))
     }
 
-    private static func readFloat32(_ input: inout [UInt8]) throws -> Float {
+private func readFloat32(_ input: inout [UInt8]) throws -> Float {
         Float(bitPattern: try readU32(&input))
     }
 
-    private static func readFloat64(_ input: inout [UInt8]) throws -> Double {
+private func readFloat64(_ input: inout [UInt8]) throws -> Double {
         Double(bitPattern: try readU64(&input))
     }
 
-    internal static func decodeNumberBody(_ wire: UInt8, input: inout [UInt8]) throws -> Int64 {
+internal func decodeNumberBody(_ wire: UInt8, input: inout [UInt8]) throws -> Int64 {
         switch wire {
         case 0 ... 231:
             return Int64(wire)
@@ -287,11 +284,11 @@ extension SkirClient {
         }
     }
 
-    internal static func decodeNumber(_ input: inout [UInt8]) throws -> Int64 {
+internal func decodeNumber(_ input: inout [UInt8]) throws -> Int64 {
         try decodeNumberBody(readU8(&input), input: &input)
     }
 
-    private static func appendLittleEndian<T: FixedWidthInteger>(_ value: T, to out: inout [UInt8]) {
+private func appendLittleEndian<T: FixedWidthInteger>(_ value: T, to out: inout [UInt8]) {
         let byteCount = MemoryLayout<T>.size
         let unsignedValue = UInt64(truncatingIfNeeded: value)
         for shift in 0 ..< byteCount {
@@ -299,15 +296,15 @@ extension SkirClient {
         }
     }
 
-    private static func appendLittleEndian(_ value: Float, to out: inout [UInt8]) {
+private func appendLittleEndian(_ value: Float, to out: inout [UInt8]) {
         appendLittleEndian(value.bitPattern, to: &out)
     }
 
-    private static func appendLittleEndian(_ value: Double, to out: inout [UInt8]) {
+private func appendLittleEndian(_ value: Double, to out: inout [UInt8]) {
         appendLittleEndian(value.bitPattern, to: &out)
     }
 
-    internal static func encodeInt32(_ value: Int32, out: inout [UInt8]) {
+internal func encodeInt32(_ value: Int32, out: inout [UInt8]) {
         switch value {
         case Int32.min ... -65_537:
             out.append(237)
@@ -329,7 +326,7 @@ extension SkirClient {
         }
     }
 
-    internal static func encodeUInt32(_ value: UInt32, out: inout [UInt8]) {
+internal func encodeUInt32(_ value: UInt32, out: inout [UInt8]) {
         switch value {
         case 0 ... 231:
             out.append(UInt8(value))
@@ -342,21 +339,21 @@ extension SkirClient {
         }
     }
 
-    fileprivate static func systemTimeToMillis(_ date: Foundation.Date) -> Int64 {
+fileprivate func systemTimeToMillis(_ date: Foundation.Date) -> Int64 {
         let millis = Int64((date.timeIntervalSince1970 * 1000).rounded())
         return min(max(millis, minTimestampMillis), maxTimestampMillis)
     }
 
-    fileprivate static func millisToSystemTime(_ millis: Int64) -> Foundation.Date {
+fileprivate func millisToSystemTime(_ millis: Int64) -> Foundation.Date {
         let clamped = min(max(millis, minTimestampMillis), maxTimestampMillis)
         return Foundation.Date(timeIntervalSince1970: Double(clamped) / 1000)
     }
 
-    fileprivate static func millisToIso8601(_ millis: Int64) -> String {
+fileprivate func millisToIso8601(_ millis: Int64) -> String {
         iso8601Formatter.string(from: millisToSystemTime(millis))
     }
 
-    internal static func writeJsonEscapedString(_ string: String, out: inout String) {
+internal func writeJsonEscapedString(_ string: String, out: inout String) {
         out.append("\"")
         for scalar in string.unicodeScalars {
             switch scalar.value {
@@ -383,11 +380,11 @@ extension SkirClient {
         out.append("\"")
     }
 
-    private static func encodeBase64(_ data: Foundation.Data) -> String {
+private func encodeBase64(_ data: Foundation.Data) -> String {
         data.base64EncodedString()
     }
 
-    private static func decodeBase64(_ string: String) throws -> Foundation.Data {
+private func decodeBase64(_ string: String) throws -> Foundation.Data {
         let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
         let remainder = trimmed.count % 4
         let padded = remainder == 0 ? trimmed : trimmed + String(repeating: "=", count: 4 - remainder)
@@ -397,11 +394,11 @@ extension SkirClient {
         return data
     }
 
-    private static func encodeHex(_ data: Foundation.Data) -> String {
+private func encodeHex(_ data: Foundation.Data) -> String {
         data.map { String(format: "%02x", $0) }.joined()
     }
 
-    private static func decodeHex(_ string: String) throws -> Foundation.Data {
+private func decodeHex(_ string: String) throws -> Foundation.Data {
         guard string.count.isMultiple(of: 2) else {
             throw schemaError("odd hex string length: \(string.count)")
         }
@@ -420,7 +417,7 @@ extension SkirClient {
         return Foundation.Data(bytes)
     }
 
-    internal static func skipValue(_ input: inout [UInt8]) throws {
+internal func skipValue(_ input: inout [UInt8]) throws {
         let wire = try readU8(&input)
         switch wire {
         case 0 ... 231, 242, 244, 246, 255:
@@ -458,7 +455,7 @@ extension SkirClient {
         }
     }
 
-    private static func floatSpecialString(_ value: Double) -> String {
+private func floatSpecialString(_ value: Double) -> String {
         if value.isNaN {
             return "NaN"
         }
@@ -871,7 +868,7 @@ extension SkirClient {
     struct ArrayAdapter<Element>: TypeAdapter {
         typealias T = [Element]
 
-        let item: SkirClient.Serializer<Element>
+        let item: Serializer<Element>
         let keyExtractor: String
 
         func isDefault(_ input: [Element]) -> Bool { input.isEmpty }
@@ -950,14 +947,14 @@ extension SkirClient {
         }
     }
 
-    struct KeyedArrayAdapter<Spec: SkirClient.KeyedArraySpec>: TypeAdapter {
-        typealias T = SkirClient.KeyedArray<Spec>
+    struct KeyedArrayAdapter<Spec: KeyedArraySpec>: TypeAdapter {
+        typealias T = KeyedArray<Spec>
 
-        let item: SkirClient.Serializer<Spec.Item>
+        let item: Serializer<Spec.Item>
 
-        func isDefault(_ input: SkirClient.KeyedArray<Spec>) -> Bool { input.isEmpty }
+        func isDefault(_ input: KeyedArray<Spec>) -> Bool { input.isEmpty }
 
-        func toJson(_ input: SkirClient.KeyedArray<Spec>, eolIndent: String?, out: inout String) {
+        func toJson(_ input: KeyedArray<Spec>, eolIndent: String?, out: inout String) {
             out.append("[")
             if let eolIndent {
                 let childIndent = eolIndent + "  "
@@ -982,15 +979,15 @@ extension SkirClient {
             out.append("]")
         }
 
-        func fromJson(_ json: Any, keepUnrecognizedValues: Bool) throws -> SkirClient.KeyedArray<Spec> {
+        func fromJson(_ json: Any, keepUnrecognizedValues: Bool) throws -> KeyedArray<Spec> {
             guard let values = json as? [Any] else {
-                return SkirClient.KeyedArray<Spec>()
+                return KeyedArray<Spec>()
             }
             let items = try values.map { try item._fromJson($0, keepUnrecognizedValues: keepUnrecognizedValues) }
-            return SkirClient.KeyedArray<Spec>(items)
+            return KeyedArray<Spec>(items)
         }
 
-        func encode(_ input: SkirClient.KeyedArray<Spec>, out: inout [UInt8]) {
+        func encode(_ input: KeyedArray<Spec>, out: inout [UInt8]) {
             if input.count <= 3 {
                 out.append(246 + UInt8(input.count))
             } else {
@@ -1002,10 +999,10 @@ extension SkirClient {
             }
         }
 
-        func decode(_ input: inout [UInt8], keepUnrecognizedValues: Bool) throws -> SkirClient.KeyedArray<Spec> {
+        func decode(_ input: inout [UInt8], keepUnrecognizedValues: Bool) throws -> KeyedArray<Spec> {
             let wire = try readU8(&input)
             if wire == 0 || wire == 246 {
-                return SkirClient.KeyedArray<Spec>()
+                return KeyedArray<Spec>()
             }
 
             let count: Int
@@ -1024,7 +1021,7 @@ extension SkirClient {
             for _ in 0 ..< count {
                 items.append(try item._decode(&input, keepUnrecognizedValues: keepUnrecognizedValues))
             }
-            return SkirClient.KeyedArray<Spec>(items)
+            return KeyedArray<Spec>(items)
         }
 
         func typeDescriptor() -> Reflection.TypeDescriptor {
@@ -1035,7 +1032,7 @@ extension SkirClient {
     struct OptionalAdapter<Wrapped>: TypeAdapter {
         typealias T = Wrapped?
 
-        let other: SkirClient.Serializer<Wrapped>
+        let other: Serializer<Wrapped>
 
         func isDefault(_ input: Wrapped?) -> Bool { input == nil }
 
@@ -1076,18 +1073,18 @@ extension SkirClient {
     }
 
     struct RecursiveAdapter<Wrapped>: TypeAdapter {
-        typealias T = SkirClient.IndirectOptional<Wrapped>
+        typealias T = IndirectOptional<Wrapped>
 
-        let other: SkirClient.Serializer<Wrapped>
+        let other: Serializer<Wrapped>
 
-        func isDefault(_ input: SkirClient.IndirectOptional<Wrapped>) -> Bool {
+        func isDefault(_ input: IndirectOptional<Wrapped>) -> Bool {
             guard let inner = input.value else {
                 return true
             }
             return other._isDefault(inner)
         }
 
-        func toJson(_ input: SkirClient.IndirectOptional<Wrapped>, eolIndent: String?, out: inout String) {
+        func toJson(_ input: IndirectOptional<Wrapped>, eolIndent: String?, out: inout String) {
             guard let inner = input.value else {
                 out.append("[]")
                 return
@@ -1095,7 +1092,7 @@ extension SkirClient {
             other._toJson(inner, eolIndent: eolIndent, out: &out)
         }
 
-        func fromJson(_ json: Any, keepUnrecognizedValues: Bool) throws -> SkirClient.IndirectOptional<Wrapped> {
+        func fromJson(_ json: Any, keepUnrecognizedValues: Bool) throws -> IndirectOptional<Wrapped> {
             if let values = json as? [Any], values.isEmpty {
                 return .none
             }
@@ -1105,7 +1102,7 @@ extension SkirClient {
             return .some(try other._fromJson(json, keepUnrecognizedValues: keepUnrecognizedValues))
         }
 
-        func encode(_ input: SkirClient.IndirectOptional<Wrapped>, out: inout [UInt8]) {
+        func encode(_ input: IndirectOptional<Wrapped>, out: inout [UInt8]) {
             guard let inner = input.value else {
                 out.append(246)
                 return
@@ -1113,7 +1110,7 @@ extension SkirClient {
             other._encode(inner, out: &out)
         }
 
-        func decode(_ input: inout [UInt8], keepUnrecognizedValues: Bool) throws -> SkirClient.IndirectOptional<Wrapped> {
+        func decode(_ input: inout [UInt8], keepUnrecognizedValues: Bool) throws -> IndirectOptional<Wrapped> {
             if let first = input.first, first == 246 || first == 0 {
                 input.removeFirst()
                 return .none
@@ -1127,16 +1124,16 @@ extension SkirClient {
     }
 
     struct OptionBoxAdapter<Wrapped>: TypeAdapter {
-        typealias T = SkirClient.IndirectOptional<Wrapped>
+        typealias T = IndirectOptional<Wrapped>
 
-        let other: SkirClient.Serializer<Wrapped>
+        let other: Serializer<Wrapped>
 
-        func isDefault(_ input: SkirClient.IndirectOptional<Wrapped>) -> Bool {
+        func isDefault(_ input: IndirectOptional<Wrapped>) -> Bool {
             if case .none = input { return true }
             return false
         }
 
-        func toJson(_ input: SkirClient.IndirectOptional<Wrapped>, eolIndent: String?, out: inout String) {
+        func toJson(_ input: IndirectOptional<Wrapped>, eolIndent: String?, out: inout String) {
             guard let inner = input.value else {
                 out.append("null")
                 return
@@ -1144,14 +1141,14 @@ extension SkirClient {
             other._toJson(inner, eolIndent: eolIndent, out: &out)
         }
 
-        func fromJson(_ json: Any, keepUnrecognizedValues: Bool) throws -> SkirClient.IndirectOptional<Wrapped> {
+        func fromJson(_ json: Any, keepUnrecognizedValues: Bool) throws -> IndirectOptional<Wrapped> {
             if json is NSNull {
                 return .none
             }
             return .some(try other._fromJson(json, keepUnrecognizedValues: keepUnrecognizedValues))
         }
 
-        func encode(_ input: SkirClient.IndirectOptional<Wrapped>, out: inout [UInt8]) {
+        func encode(_ input: IndirectOptional<Wrapped>, out: inout [UInt8]) {
             guard let inner = input.value else {
                 out.append(255)
                 return
@@ -1159,7 +1156,7 @@ extension SkirClient {
             other._encode(inner, out: &out)
         }
 
-        func decode(_ input: inout [UInt8], keepUnrecognizedValues: Bool) throws -> SkirClient.IndirectOptional<Wrapped> {
+        func decode(_ input: inout [UInt8], keepUnrecognizedValues: Bool) throws -> IndirectOptional<Wrapped> {
             if input.first == 255 {
                 input.removeFirst()
                 return .none
@@ -1171,4 +1168,3 @@ extension SkirClient {
             .optional(other.typeDescriptor())
         }
     }
-}

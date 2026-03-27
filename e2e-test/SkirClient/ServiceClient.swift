@@ -1,10 +1,8 @@
 import Foundation
 
-extension SkirClient {
-
-    // =========================================================================
-    // RpcError
-    // =========================================================================
+// =========================================================================
+// RpcError
+// =========================================================================
 
     /// Error returned by `ServiceClient.invokeRemote` when the server responds
     /// with a non-2xx status code or when a network-level failure occurs.
@@ -129,4 +127,3 @@ extension SkirClient {
             }
         }
     }
-}

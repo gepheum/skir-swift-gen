@@ -1,10 +1,8 @@
 import Foundation
 
-extension SkirClient {
-
-    // =========================================================================
-    // RawResponse
-    // =========================================================================
+// =========================================================================
+// RawResponse
+// =========================================================================
 
     /// The raw HTTP response to return from a service handler.
     ///
@@ -462,10 +460,9 @@ extension SkirClient {
         /// (requestJson, keepUnrecognized, readable) -> responseJson
         let invoke: (String, Bool, Bool) async throws -> String
     }
-}
 
-private func serveStudio(_ jsUrl: String) -> SkirClient.RawResponse {
-    SkirClient.RawResponse.okHtml(studioHtml(jsUrl))
+private func serveStudio(_ jsUrl: String) -> RawResponse {
+    RawResponse.okHtml(studioHtml(jsUrl))
 }
 
 private func studioHtml(_ jsUrl: String) -> String {
