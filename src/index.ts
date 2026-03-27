@@ -1,7 +1,4 @@
-// SkirRPC...
 // Githubisation: split, add CI
-// Add unit tests for method generation
-// Move UnrecognizedFieldsData to an Internal namespace
 
 import {
   type CodeGenerator,
