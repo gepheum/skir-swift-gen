@@ -1,5 +1,3 @@
-// Githubisation: split, add CI
-
 import {
   type CodeGenerator,
   type Constant,
