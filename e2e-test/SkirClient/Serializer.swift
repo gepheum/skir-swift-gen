@@ -4,168 +4,168 @@ import Foundation
 // DeserializeError
 // =============================================================================
 
-    public enum DeserializeError: Error, CustomStringConvertible {
-        case invalidJson(String)
-        case schema(String)
+public enum DeserializeError: Error, CustomStringConvertible {
+    case invalidJson(String)
+    case schema(String)
 
-        public var description: String {
-            switch self {
-            case let .invalidJson(message):
-                return "invalid JSON: \(message)"
-            case let .schema(message):
-                return message
-            }
+    public var description: String {
+        switch self {
+        case let .invalidJson(message):
+            return "invalid JSON: \(message)"
+        case let .schema(message):
+            return message
         }
     }
+}
 
-    // =============================================================================
-    // Serializer
-    // =============================================================================
+// =============================================================================
+// Serializer
+// =============================================================================
 
-    /// Serializes and deserializes values of type `T` in both JSON and binary
-    /// formats.
-    public final class Serializer<T> {
-        private let adapter: any TypeAdapter<T>
+/// Serializes and deserializes values of type `T` in both JSON and binary
+/// formats.
+public final class Serializer<T> {
+    private let adapter: any TypeAdapter<T>
 
-        // MARK: - Public API
+    // MARK: - Public API
 
-        /// Serializes `v` to a JSON string.
-        ///
-        /// - Parameter readable: When `true`, structs are serialized as JSON objects
-        ///   and enum constants as strings. This format is more verbose and readable,
-        ///   but should not be used if you need persistence, because skir allows
-        ///   fields to be renamed in record definitions. In other words, never store
-        ///   a readable JSON on disk or in a database.
-        public func toJson(_ v: T, readable: Bool = false) -> String {
-            var out = ""
-            let eolIndent: String? = readable ? "\n" : nil
-            adapter.toJson(v, eolIndent: eolIndent, out: &out)
-            return out
-        }
-
-        /// Deserializes a JSON string into a value of type `T`.
-        ///
-        /// - Parameter keepUnrecognized: When `true`, unrecognized fields found
-        ///   when deserializing are saved. If the value is later re-serialized, the
-        ///   unrecognized fields will be present in the serialized form. Set to
-        ///   `false` (the default) if the input might come from a malicious user.
-        public func fromJson(_ code: String, keepUnrecognized: Bool = false) throws -> T {
-            guard let data = code.data(using: .utf8) else {
-                throw DeserializeError.invalidJson("invalid UTF-8 input")
-            }
-            let jsonValue: Any
-            do {
-                jsonValue = try JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)
-            } catch {
-                throw DeserializeError.invalidJson(error.localizedDescription)
-            }
-            return try adapter.fromJson(jsonValue, keepUnrecognizedValues: keepUnrecognized)
-        }
-
-        /// Serializes `v` to the Skir binary wire format.
-        ///
-        /// The returned bytes are prefixed with the four-byte magic `"skir"`.
-        public func toBytes(_ v: T) -> [UInt8] {
-            var out: [UInt8] = Array("skir".utf8)
-            adapter.encode(v, out: &out)
-            return out
-        }
-
-        /// Deserializes a value from the Skir binary wire format.
-        ///
-        /// If `bytes` lacks the `"skir"` prefix the payload is treated as a UTF-8
-        /// JSON string and parsed via `fromJson(_:keepUnrecognized:)`.
-        ///
-        /// - Parameter keepUnrecognized: When `true`, unrecognized fields found
-        ///   when deserializing are saved. If the value is later re-serialized, the
-        ///   unrecognized fields will be present in the serialized form. Set to
-        ///   `false` (the default) if the input might come from a malicious user.
-        public func fromBytes(_ bytes: [UInt8], keepUnrecognized: Bool = false) throws -> T {
-            if bytes.count >= 4 && bytes[0] == 115 && bytes[1] == 107 && bytes[2] == 105 && bytes[3] == 114 {
-                // bytes start with "skir"
-                var rest = Array(bytes.dropFirst(4))
-                return try adapter.decode(&rest, keepUnrecognizedValues: keepUnrecognized)
-            } else {
-                guard let s = String(bytes: bytes, encoding: .utf8) else {
-                    throw DeserializeError.schema("invalid UTF-8 in binary payload")
-                }
-                return try fromJson(s, keepUnrecognized: keepUnrecognized)
-            }
-        }
-
-        /// Returns a TypeDescriptor that describes the schema of `T`.
-        public func typeDescriptor() -> Reflection.TypeDescriptor {
-            return adapter.typeDescriptor()
-        }
-
-        func _isDefault(_ value: T) -> Bool {
-            adapter.isDefault(value)
-        }
-
-        func _toJson(_ value: T, eolIndent: String?, out: inout String) {
-            adapter.toJson(value, eolIndent: eolIndent, out: &out)
-        }
-
-        func _fromJson(_ json: Any, keepUnrecognizedValues: Bool) throws -> T {
-            try adapter.fromJson(json, keepUnrecognizedValues: keepUnrecognizedValues)
-        }
-
-        func _encode(_ value: T, out: inout [UInt8]) {
-            adapter.encode(value, out: &out)
-        }
-
-        func _decode(_ input: inout [UInt8], keepUnrecognizedValues: Bool) throws -> T {
-            try adapter.decode(&input, keepUnrecognizedValues: keepUnrecognizedValues)
-        }
-
-        // MARK: - Internal Constructors
-
-        /// Constructs a Serializer with a given adapter.
-        ///
-        /// For use only by code generated by the Skir code generator.
-        public init(adapter: any TypeAdapter<T>) {
-            self.adapter = adapter
-        }
-    }
-
-    // =============================================================================
-    // TypeAdapter Protocol
-    // =============================================================================
-
-    /// Internal protocol implemented by every concrete adapter
-    /// (primitive, array, optional, struct, enum).
+    /// Serializes `v` to a JSON string.
     ///
-    /// Only adapters defined in this module can satisfy it.
-    /// For use only by code generated by the Skir code generator.
-    public protocol TypeAdapter<T> {
-        associatedtype T
-
-        /// Returns `true` when `input` is the default (zero) value for `T`.
-        func isDefault(_ input: T) -> Bool
-
-        /// Writes the JSON representation of `input` to `out`.
-        ///
-        /// `eolIndent` is `nil` for dense (compact) output. In readable (indented)
-        /// mode it is `Some` with a string composed of `"\n"` followed by the
-        /// indentation prefix for the current nesting level.
-        func toJson(_ input: T, eolIndent: String?, out: inout String)
-
-        /// Deserializes a JSON value into `T`.
-        ///
-        /// Set `keepUnrecognizedValues` to preserve fields/variants from a newer
-        /// schema version that are not recognized by this decoder.
-        func fromJson(_ json: Any, keepUnrecognizedValues: Bool) throws -> T
-
-        /// Serializes `input` to the Skir binary wire format, appending bytes to `out`.
-        func encode(_ input: T, out: inout [UInt8])
-
-        /// Deserializes a value from the Skir binary wire format, advancing the
-        /// slice past the bytes consumed.
-        ///
-        /// Set `keepUnrecognizedValues` to preserve fields/variants from a newer
-        /// schema version.
-        func decode(_ input: inout [UInt8], keepUnrecognizedValues: Bool) throws -> T
-
-        /// Returns a TypeDescriptor that describes the schema of `T`.
-        func typeDescriptor() -> Reflection.TypeDescriptor
+    /// - Parameter readable: When `true`, structs are serialized as JSON objects
+    ///   and enum constants as strings. This format is more verbose and readable,
+    ///   but should not be used if you need persistence, because skir allows
+    ///   fields to be renamed in record definitions. In other words, never store
+    ///   a readable JSON on disk or in a database.
+    public func toJson(_ v: T, readable: Bool = false) -> String {
+        var out = ""
+        let eolIndent: String? = readable ? "\n" : nil
+        adapter.toJson(v, eolIndent: eolIndent, out: &out)
+        return out
     }
+
+    /// Deserializes a JSON string into a value of type `T`.
+    ///
+    /// - Parameter keepUnrecognized: When `true`, unrecognized fields found
+    ///   when deserializing are saved. If the value is later re-serialized, the
+    ///   unrecognized fields will be present in the serialized form. Set to
+    ///   `false` (the default) if the input might come from a malicious user.
+    public func fromJson(_ code: String, keepUnrecognized: Bool = false) throws -> T {
+        guard let data = code.data(using: .utf8) else {
+            throw DeserializeError.invalidJson("invalid UTF-8 input")
+        }
+        let jsonValue: Any
+        do {
+            jsonValue = try JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)
+        } catch {
+            throw DeserializeError.invalidJson(error.localizedDescription)
+        }
+        return try adapter.fromJson(jsonValue, keepUnrecognizedValues: keepUnrecognized)
+    }
+
+    /// Serializes `v` to the Skir binary wire format.
+    ///
+    /// The returned bytes are prefixed with the four-byte magic `"skir"`.
+    public func toBytes(_ v: T) -> [UInt8] {
+        var out: [UInt8] = Array("skir".utf8)
+        adapter.encode(v, out: &out)
+        return out
+    }
+
+    /// Deserializes a value from the Skir binary wire format.
+    ///
+    /// If `bytes` lacks the `"skir"` prefix the payload is treated as a UTF-8
+    /// JSON string and parsed via `fromJson(_:keepUnrecognized:)`.
+    ///
+    /// - Parameter keepUnrecognized: When `true`, unrecognized fields found
+    ///   when deserializing are saved. If the value is later re-serialized, the
+    ///   unrecognized fields will be present in the serialized form. Set to
+    ///   `false` (the default) if the input might come from a malicious user.
+    public func fromBytes(_ bytes: [UInt8], keepUnrecognized: Bool = false) throws -> T {
+        if bytes.count >= 4 && bytes[0] == 115 && bytes[1] == 107 && bytes[2] == 105 && bytes[3] == 114 {
+            // bytes start with "skir"
+            var rest = Array(bytes.dropFirst(4))
+            return try adapter.decode(&rest, keepUnrecognizedValues: keepUnrecognized)
+        } else {
+            guard let s = String(bytes: bytes, encoding: .utf8) else {
+                throw DeserializeError.schema("invalid UTF-8 in binary payload")
+            }
+            return try fromJson(s, keepUnrecognized: keepUnrecognized)
+        }
+    }
+
+    /// Returns a TypeDescriptor that describes the schema of `T`.
+    public func typeDescriptor() -> Reflection.TypeDescriptor {
+        return adapter.typeDescriptor()
+    }
+
+    func _isDefault(_ value: T) -> Bool {
+        adapter.isDefault(value)
+    }
+
+    func _toJson(_ value: T, eolIndent: String?, out: inout String) {
+        adapter.toJson(value, eolIndent: eolIndent, out: &out)
+    }
+
+    func _fromJson(_ json: Any, keepUnrecognizedValues: Bool) throws -> T {
+        try adapter.fromJson(json, keepUnrecognizedValues: keepUnrecognizedValues)
+    }
+
+    func _encode(_ value: T, out: inout [UInt8]) {
+        adapter.encode(value, out: &out)
+    }
+
+    func _decode(_ input: inout [UInt8], keepUnrecognizedValues: Bool) throws -> T {
+        try adapter.decode(&input, keepUnrecognizedValues: keepUnrecognizedValues)
+    }
+
+    // MARK: - Internal Constructors
+
+    /// Constructs a Serializer with a given adapter.
+    ///
+    /// For use only by code generated by the Skir code generator.
+    public init(adapter: any TypeAdapter<T>) {
+        self.adapter = adapter
+    }
+}
+
+// =============================================================================
+// TypeAdapter Protocol
+// =============================================================================
+
+/// Internal protocol implemented by every concrete adapter
+/// (primitive, array, optional, struct, enum).
+///
+/// Only adapters defined in this module can satisfy it.
+/// For use only by code generated by the Skir code generator.
+public protocol TypeAdapter<T> {
+    associatedtype T
+
+    /// Returns `true` when `input` is the default (zero) value for `T`.
+    func isDefault(_ input: T) -> Bool
+
+    /// Writes the JSON representation of `input` to `out`.
+    ///
+    /// `eolIndent` is `nil` for dense (compact) output. In readable (indented)
+    /// mode it is `Some` with a string composed of `"\n"` followed by the
+    /// indentation prefix for the current nesting level.
+    func toJson(_ input: T, eolIndent: String?, out: inout String)
+
+    /// Deserializes a JSON value into `T`.
+    ///
+    /// Set `keepUnrecognizedValues` to preserve fields/variants from a newer
+    /// schema version that are not recognized by this decoder.
+    func fromJson(_ json: Any, keepUnrecognizedValues: Bool) throws -> T
+
+    /// Serializes `input` to the Skir binary wire format, appending bytes to `out`.
+    func encode(_ input: T, out: inout [UInt8])
+
+    /// Deserializes a value from the Skir binary wire format, advancing the
+    /// slice past the bytes consumed.
+    ///
+    /// Set `keepUnrecognizedValues` to preserve fields/variants from a newer
+    /// schema version.
+    func decode(_ input: inout [UInt8], keepUnrecognizedValues: Bool) throws -> T
+
+    /// Returns a TypeDescriptor that describes the schema of `T`.
+    func typeDescriptor() -> Reflection.TypeDescriptor
+}

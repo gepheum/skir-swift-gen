@@ -153,4 +153,5 @@ struct True {
   field: bool;
   by: bool;
   it: [Floats|x];
+  init: bool;
 }

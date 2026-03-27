@@ -146,6 +146,49 @@ class SwiftModuleCodeGenerator {
     );
     this.push("\n");
 
+    // The public memberwise init (excludes _unrecognized, which is an impl detail).
+    this.push("public init(\n");
+    for (const field of struct.fields) {
+      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
+      const fieldType = typeSpeller.getSwiftType(
+        field.type!,
+        structLocation,
+        field.isRecursive,
+      );
+      this.push(`${fieldName}: ${fieldType},\n`);
+    }
+    this.push(") {\n");
+    for (const field of struct.fields) {
+      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
+      this.push(`self.${fieldName} = ${fieldName}\n`);
+    }
+    this.push("self._unrecognized = nil\n");
+    this.push("}\n\n");
+
+    // Internal init used by generated code that needs to carry _unrecognized.
+    this.push("init(\n");
+    for (const field of struct.fields) {
+      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
+      const fieldType = typeSpeller.getSwiftType(
+        field.type!,
+        structLocation,
+        field.isRecursive,
+      );
+      this.push(`${fieldName}: ${fieldType},\n`);
+    }
+    this.push(
+      "_unrecognized: SkirClient.UnrecognizedFields<",
+      selfTypeRef,
+      ">,\n",
+    );
+    this.push(") {\n");
+    for (const field of struct.fields) {
+      const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
+      this.push(`self.${fieldName} = ${fieldName}\n`);
+    }
+    this.push("self._unrecognized = _unrecognized\n");
+    this.push("}\n\n");
+
     this.push("public static let defaultValue = ", selfTypeRef, "(\n");
     for (const field of struct.fields) {
       const fieldName = getSwiftFieldName(field.name.text, field.isRecursive);
