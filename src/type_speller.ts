@@ -73,31 +73,31 @@ export class TypeSpeller {
       case "primitive": {
         switch (type.primitive) {
           case "bool":
-            result = "SkirClient.Serializer.bool()";
+            result = "SkirClient.Serializers.bool()";
             break;
           case "int32":
-            result = "SkirClient.Serializer.int32()";
+            result = "SkirClient.Serializers.int32()";
             break;
           case "int64":
-            result = "SkirClient.Serializer.int64()";
+            result = "SkirClient.Serializers.int64()";
             break;
           case "hash64":
-            result = "SkirClient.Serializer.hash64()";
+            result = "SkirClient.Serializers.hash64()";
             break;
           case "float32":
-            result = "SkirClient.Serializer.float32()";
+            result = "SkirClient.Serializers.float32()";
             break;
           case "float64":
-            result = "SkirClient.Serializer.float64()";
+            result = "SkirClient.Serializers.float64()";
             break;
           case "timestamp":
-            result = "SkirClient.Serializer.timestamp()";
+            result = "SkirClient.Serializers.timestamp()";
             break;
           case "string":
-            result = "SkirClient.Serializer.string()";
+            result = "SkirClient.Serializers.string()";
             break;
           case "bytes":
-            result = "SkirClient.Serializer.bytes()";
+            result = "SkirClient.Serializers.bytes()";
             break;
           default: {
             const _: never = type.primitive;
@@ -112,25 +112,17 @@ export class TypeSpeller {
           context,
           init,
         );
-        const itemType = this.getSwiftType(type.item, context);
         if (type.key && keyTypeIsSupported(type.key.keyType)) {
-          const arrayType = this.getSwiftType(type, context);
           result =
-            `SkirClient.Serializer<${arrayType}>.keyedArray(\n` +
-            itemSerializer +
-            "\n)";
+            `SkirClient.Serializers.keyedArray(\n` + itemSerializer + "\n)";
         } else {
-          result =
-            `SkirClient.Serializer<[${itemType}]>.array(\n` +
-            itemSerializer +
-            ', keyExtractor: ""\n)';
+          result = `SkirClient.Serializers.array(\n` + itemSerializer + "\n)";
         }
         break;
       }
       case "optional": {
-        const otherType = this.getSwiftType(type.other, context);
         result =
-          `SkirClient.Serializer<${otherType}?>.optional(\n` +
+          `SkirClient.Serializers.optional(\n` +
           this.getSerializerExpression(type.other, context, init) +
           "\n)";
         break;

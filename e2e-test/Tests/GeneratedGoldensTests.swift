@@ -39,27 +39,27 @@ private func makeATV<T>(_ value: T, _ s: SkirClient.Serializer<T>) -> AnyTypedVa
 private func evaluateTypedValue(_ tv: G.TypedValue) -> AnyTypedValue {
   switch tv {
   case .bool(let v):
-    return makeATV(v, .bool())
+    return makeATV(v, Serializers.bool())
   case .int32(let v):
-    return makeATV(v, .int32())
+    return makeATV(v, Serializers.int32())
   case .int64(let v):
-    return makeATV(v, .int64())
+    return makeATV(v, Serializers.int64())
   case .hash64(let v):
-    return makeATV(v, .hash64())
+    return makeATV(v, Serializers.hash64())
   case .float32(let v):
-    return makeATV(v, .float32())
+    return makeATV(v, Serializers.float32())
   case .float64(let v):
-    return makeATV(v, .float64())
+    return makeATV(v, Serializers.float64())
   case .timestamp(let v):
-    return makeATV(v, .timestamp())
+    return makeATV(v, Serializers.timestamp())
   case .string(let v):
-    return makeATV(v, .string())
+    return makeATV(v, Serializers.string())
   case .bytes(let v):
-    return makeATV(v, .bytes())
+    return makeATV(v, Serializers.bytes())
   case .boolOptional(let v):
-    return makeATV(v, .optional(.bool()))
+    return makeATV(v, Serializers.optional(Serializers.bool()))
   case .ints(let v):
-    return makeATV(v, .array(.int32()))
+    return makeATV(v, Serializers.array(Serializers.int32()))
   case .point(let v):
     return makeATV(v, G.Point.serializer)
   case .color(let v):
@@ -295,7 +295,7 @@ final class GeneratedGoldensTests: XCTestCase {
     _ input: G.Assertion.ReserializeLargeString, testNum: Int32
   ) {
     let str = String(repeating: "a", count: Int(input.numChars))
-    let serializer = SkirClient.Serializer<String>.string()
+    let serializer = SkirClient.Serializers.string()
     let bytes = serializer.toBytes(str)
     let decoded = try! serializer.fromBytes(bytes)
     XCTAssertEqual(decoded, str, "test \(testNum): large string round-trip failed")
@@ -312,7 +312,7 @@ final class GeneratedGoldensTests: XCTestCase {
     _ input: G.Assertion.ReserializeLargeArray, testNum: Int32
   ) {
     let arr = [Int32](repeating: 1, count: Int(input.numItems))
-    let serializer = SkirClient.Serializer<[Int32]>.array(.int32())
+    let serializer = SkirClient.Serializers.array(Serializers.int32())
     let bytes = serializer.toBytes(arr)
     let decoded = try! serializer.fromBytes(bytes)
     XCTAssertEqual(decoded, arr, "test \(testNum): large array round-trip failed")
