@@ -284,13 +284,13 @@ let notFoundOrDefault = registry.users.findByKeyOrDefault(999)
 print(notFoundOrDefault.pets.count)  // 0
 ```
 
-### Skir services
+### SkirRPC services
 
-#### Starting a Skir service on an HTTP server
+#### Starting a SkirRPC service on an HTTP server
 
 Full example [here](https://github.com/gepheum/skir-swift-example/blob/main/Sources/StartService/main.swift).
 
-#### Sending RPCs to a Skir service
+#### Sending RPCs to a SkirRPC service
 
 Full example [here](https://github.com/gepheum/skir-swift-example/blob/main/Sources/CallService/main.swift).
 
