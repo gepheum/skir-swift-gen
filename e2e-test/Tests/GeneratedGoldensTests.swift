@@ -66,6 +66,10 @@ private func evaluateTypedValue(_ tv: G.TypedValue) -> AnyTypedValue {
     return makeATV(v, G.Color.serializer)
   case .myEnum(let v):
     return makeATV(v, G.MyEnum.serializer)
+  case .enumA(let v):
+    return makeATV(v, G.EnumA.serializer)
+  case .enumB(let v):
+    return makeATV(v, G.EnumB.serializer)
   case .keyedArrays(let v):
     return makeATV(v, G.KeyedArrays.serializer)
   case .recStruct(let v):
@@ -129,6 +133,38 @@ private func evaluateTypedValue(_ tv: G.TypedValue) -> AnyTypedValue {
     return makeATV(
       try! G.MyEnum.serializer.fromBytes(evaluateBytes(expr), keepUnrecognized: false),
       G.MyEnum.serializer)
+  case .enumAFromJsonKeepUnrecognized(let expr):
+    return makeATV(
+      try! G.EnumA.serializer.fromJson(evaluateString(expr), keepUnrecognized: true),
+      G.EnumA.serializer)
+  case .enumAFromJsonDropUnrecognized(let expr):
+    return makeATV(
+      try! G.EnumA.serializer.fromJson(evaluateString(expr), keepUnrecognized: false),
+      G.EnumA.serializer)
+  case .enumAFromBytesKeepUnrecognized(let expr):
+    return makeATV(
+      try! G.EnumA.serializer.fromBytes(evaluateBytes(expr), keepUnrecognized: true),
+      G.EnumA.serializer)
+  case .enumAFromBytesDropUnrecognized(let expr):
+    return makeATV(
+      try! G.EnumA.serializer.fromBytes(evaluateBytes(expr), keepUnrecognized: false),
+      G.EnumA.serializer)
+  case .enumBFromJsonKeepUnrecognized(let expr):
+    return makeATV(
+      try! G.EnumB.serializer.fromJson(evaluateString(expr), keepUnrecognized: true),
+      G.EnumB.serializer)
+  case .enumBFromJsonDropUnrecognized(let expr):
+    return makeATV(
+      try! G.EnumB.serializer.fromJson(evaluateString(expr), keepUnrecognized: false),
+      G.EnumB.serializer)
+  case .enumBFromBytesKeepUnrecognized(let expr):
+    return makeATV(
+      try! G.EnumB.serializer.fromBytes(evaluateBytes(expr), keepUnrecognized: true),
+      G.EnumB.serializer)
+  case .enumBFromBytesDropUnrecognized(let expr):
+    return makeATV(
+      try! G.EnumB.serializer.fromBytes(evaluateBytes(expr), keepUnrecognized: false),
+      G.EnumB.serializer)
   case .unknown:
     fatalError("Unknown TypedValue variant encountered in golden test")
   }
@@ -212,8 +248,68 @@ final class GeneratedGoldensTests: XCTestCase {
       verifyReserializeLargeString(v, testNum: testNum)
     case .reserializeLargeArray(let v):
       verifyReserializeLargeArray(v, testNum: testNum)
+    case .enumAFromJsonIsConstant(let v):
+      verifyEnumAFromJsonIsConstant(v, testNum: testNum)
+    case .enumAFromBytesIsConstant(let v):
+      verifyEnumAFromBytesIsConstant(v, testNum: testNum)
+    case .enumBFromJsonIsWrapperB(let v):
+      verifyEnumBFromJsonIsWrapperB(v, testNum: testNum)
+    case .enumBFromBytesIsWrapperB(let v):
+      verifyEnumBFromBytesIsWrapperB(v, testNum: testNum)
     case .unknown:
       XCTFail("test \(testNum): unknown assertion type")
+    }
+  }
+
+  private func verifyEnumAFromJsonIsConstant(
+    _ input: G.Assertion.EnumAFromJsonIsConstant, testNum: Int32
+  ) {
+    let enumA = try! G.EnumA.serializer.fromJson(
+      evaluateString(input.actual), keepUnrecognized: input.keepUnrecognized)
+    switch enumA {
+    case .a:
+      break
+    default:
+      XCTFail("test \(testNum): expected EnumA.A constant")
+    }
+  }
+
+  private func verifyEnumAFromBytesIsConstant(
+    _ input: G.Assertion.EnumAFromBytesIsConstant, testNum: Int32
+  ) {
+    let enumA = try! G.EnumA.serializer.fromBytes(
+      evaluateBytes(input.actual), keepUnrecognized: input.keepUnrecognized)
+    switch enumA {
+    case .a:
+      break
+    default:
+      XCTFail("test \(testNum): expected EnumA.A constant")
+    }
+  }
+
+  private func verifyEnumBFromJsonIsWrapperB(
+    _ input: G.Assertion.EnumBFromJsonIsWrapperB, testNum: Int32
+  ) {
+    let enumB = try! G.EnumB.serializer.fromJson(
+      evaluateString(input.actual), keepUnrecognized: input.keepUnrecognized)
+    switch enumB {
+    case .b(let value):
+      XCTAssertEqual(value, input.expected, "test \(testNum): EnumB.b value mismatch")
+    default:
+      XCTFail("test \(testNum): expected EnumB.b wrapper")
+    }
+  }
+
+  private func verifyEnumBFromBytesIsWrapperB(
+    _ input: G.Assertion.EnumBFromBytesIsWrapperB, testNum: Int32
+  ) {
+    let enumB = try! G.EnumB.serializer.fromBytes(
+      evaluateBytes(input.actual), keepUnrecognized: input.keepUnrecognized)
+    switch enumB {
+    case .b(let value):
+      XCTAssertEqual(value, input.expected, "test \(testNum): EnumB.b value mismatch")
+    default:
+      XCTFail("test \(testNum): expected EnumB.b wrapper")
     }
   }
 
