@@ -608,8 +608,11 @@ class SwiftModuleCodeGenerator {
         this.push("}\n");
         this.push(");\n");
       } else {
+        const nameLiteral = JSON.stringify(
+          convertCase(variant.name.text, "UPPER_UNDERSCORE"),
+        );
         this.push(`${typeRef}._typeAdapter.addConstantVariant(\n`);
-        this.push(`name: ${JSON.stringify(variant.name.text)},\n`);
+        this.push(`name: ${nameLiteral},\n`);
         this.push(`number: ${variant.number},\n`);
         this.push(`kindOrdinal: ${kindOrdinal},\n`);
         this.push(`doc: ${JSON.stringify(docToCommentText(variant.doc))},\n`);
