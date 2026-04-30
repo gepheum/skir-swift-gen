@@ -608,9 +608,7 @@ class SwiftModuleCodeGenerator {
         this.push("}\n");
         this.push(");\n");
       } else {
-        const nameLiteral = JSON.stringify(
-          convertCase(variant.name.text, "UPPER_UNDERSCORE"),
-        );
+        const nameLiteral = JSON.stringify(variant.name.text);
         this.push(`${typeRef}._typeAdapter.addConstantVariant(\n`);
         this.push(`name: ${nameLiteral},\n`);
         this.push(`number: ${variant.number},\n`);

@@ -7,7 +7,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/gepheum/skir-swift-client",
-            branch: "main"
+            branch: "v1.0.6"
         ),
     ],
     targets: [
