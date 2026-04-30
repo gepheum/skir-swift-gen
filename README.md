@@ -309,3 +309,4 @@ if case .structRecord(let sd) = descriptorFromJson {
   print(sd)  // StructDescriptor(...:User)
 }
 ```
+
