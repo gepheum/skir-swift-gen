@@ -399,11 +399,8 @@ class SwiftModuleCodeGenerator {
       `case unknown(unrecognized: SkirClient.UnrecognizedVariant<${selfTypeRef}>);\n`,
     );
     const variants = record.fields;
-    const variantNamesNeedSuffix = doVariantNamesNeedSuffix(variants);
     for (const variant of variants) {
-      const variantName = convertCase(variant.name.text, "lowerCamel").concat(
-        variantNamesNeedSuffix ? (variant.type ? "Wrapper" : "Const") : "",
-      );
+      const variantName = this.getVariantName(variant);
       this.push(commentify(docToCommentText(variant.doc)));
       const variantType = variant.type;
       if (variantType) {
@@ -423,9 +420,7 @@ class SwiftModuleCodeGenerator {
       this.push(`${this.pub}enum _Kind: Hashable {\n`);
       this.push("case unknown;\n");
       for (const variant of variants) {
-        const variantName = convertCase(variant.name.text, "lowerCamel").concat(
-          variantNamesNeedSuffix ? (variant.type ? "Wrapper" : "Const") : "",
-        );
+        const variantName = this.getVariantName(variant);
         this.push(`case ${variantName};\n`);
       }
       this.push("}\n\n");
@@ -435,9 +430,7 @@ class SwiftModuleCodeGenerator {
       this.push("case .unknown:\n");
       this.push("return .unknown\n");
       for (const variant of variants) {
-        const variantName = convertCase(variant.name.text, "lowerCamel").concat(
-          variantNamesNeedSuffix ? (variant.type ? "Wrapper" : "Const") : "",
-        );
+        const variantName = this.getVariantName(variant);
         if (variant.type) {
           this.push(`case .${variantName}(_):\n`);
         } else {
@@ -462,7 +455,7 @@ class SwiftModuleCodeGenerator {
       "case (.unknown, .unknown): return true\n",
     );
     for (const variant of variants) {
-      const variantName = this.getVariantName(variant, variantNamesNeedSuffix);
+      const variantName = this.getVariantName(variant);
       if (variant.type) {
         this.push(
           `case (.${variantName}(let l), .${variantName}(let r)): return l == r\n`,
@@ -512,7 +505,7 @@ class SwiftModuleCodeGenerator {
     );
     for (let i = 0; i < variants.length; i++) {
       const variant = variants[i]!;
-      const variantName = this.getVariantName(variant, variantNamesNeedSuffix);
+      const variantName = this.getVariantName(variant);
       if (variant.type) {
         this.push(`case .${variantName}(_): `);
       } else {
@@ -575,10 +568,9 @@ class SwiftModuleCodeGenerator {
     }
 
     const variants = record.fields;
-    const variantNamesNeedSuffix = doVariantNamesNeedSuffix(variants);
     for (let i = 0; i < variants.length; i++) {
       const variant = variants[i]!;
-      const variantName = this.getVariantName(variant, variantNamesNeedSuffix);
+      const variantName = this.getVariantName(variant);
       const kindOrdinal = i + 1;
       if (variant.type) {
         const serializerExpr = this.typeSpeller.getSerializerExpression(
@@ -675,13 +667,11 @@ class SwiftModuleCodeGenerator {
     );
   }
 
-  private getVariantName(
-    variant: Field,
-    variantNamesNeedSuffix: boolean,
-  ): string {
-    return convertCase(variant.name.text, "lowerCamel").concat(
-      variantNamesNeedSuffix ? (variant.type ? "Wrapper" : "Const") : "",
-    );
+  private getVariantName(variant: Field): string {
+    const lowerCamelName = convertCase(variant.name.text, "lowerCamel");
+    return isValidVariantName(lowerCamelName)
+      ? lowerCamelName
+      : `${lowerCamelName}_`;
   }
 
   private pushSeparator(header: string): void {
@@ -928,18 +918,6 @@ function resolveMaybeIndirect(type: ResolvedType): "indirect " | "" {
     case "record":
       return "indirect ";
   }
-}
-
-function doVariantNamesNeedSuffix(variants: readonly Field[]): boolean {
-  const seenNames = new Set<string>();
-  for (const variant of variants) {
-    const lowerCamelName = convertCase(variant.name.text, "lowerCamel");
-    if (seenNames.has(lowerCamelName) || !isValidVariantName(lowerCamelName)) {
-      return true;
-    }
-    seenNames.add(lowerCamelName);
-  }
-  return false;
 }
 
 function toSwiftStringLiteral(input: string): string {
