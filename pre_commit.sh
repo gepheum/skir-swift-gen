@@ -2,6 +2,8 @@
 
 set -e
 
+export GITHUB_TOKEN=""
+
 npm i
 npm run lint:fix
 npm run format
